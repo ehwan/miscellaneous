@@ -213,8 +213,7 @@ namespace EH
         struct Context;
         struct Kernel;
         struct Program;
-        //template < typename Type >
-        //struct Buffer;
+        struct Buffer;
         struct Queue;
 
         struct Platform : CLObject< cl_platform_id , Platform >
@@ -272,6 +271,10 @@ namespace EH
             inline std::string getExtensions() const
             {
                 return getInfoString( CL_PLATFORM_EXTENSIONS );
+            }
+            bool has_gl_sharing_extension() const
+            {
+                return getExtensions().find( "gl_sharing" , 0 ) != std::string::npos;
             }
 
             std::vector< Device > getDevices( cl_device_type type )
@@ -364,6 +367,14 @@ namespace EH
             {
                 return getInfoString( CL_DEVICE_VERSION );
             }
+            std::string getExtensions() const
+            {
+                return getInfoString( CL_DEVICE_EXTENSIONS );
+            }
+            bool has_gl_sharing_extension() const
+            {
+                return getExtensions().find( "gl_sharing" , 0 ) != std::string::npos;
+            }
             Device getParent() const
             {
                 return getUnary< cl_device_id >( CL_DEVICE_PARENT_DEVICE );
@@ -396,25 +407,29 @@ namespace EH
                 parent()
             {
             }
-            explicit Context( const Device& device )
+            explicit Context( const Device& device , const cl_context_properties *properties = 0 )
             {
                 cl_int err;
-                handler = clCreateContext(
-                        0 , 1 , &device.handler , 0 , 0 , &err );
+                handler = clCreateContext( properties ,
+                                           1 , &device.handler ,
+                                           0 , 0 ,
+                                           &err );
                 CheckError( err , "CreateContext 1" );
             }
             template < typename Container , typename = decltype( std::begin( Container() ) ) >
-            explicit Context( Container&& devices )
+            explicit Context( Container&& devices , const cl_context_properties *properties = 0 )
             {
-                Context( std::begin( devices ) , std::end( devices ) );
+                Context( std::begin( devices ) , std::end( devices ) , properties );
             }
             template < typename IterType >
-            explicit Context( IterType&& begin , IterType&& end )
+            explicit Context( IterType&& begin , IterType&& end , const cl_context_properties *properties = 0 )
             {
                 cl_int err;
                 std::vector< cl_device_id > devs( std::forward< IterType >( begin ) , std::forward< IterType >( end ) );
-                handler = clCreateContext(
-                        0 , devs.size() , devs.data() , 0 , 0 , &err );
+                handler = clCreateContext( properties ,
+                                           devs.size() , devs.data() ,
+                                           0 , 0 ,
+                                           &err );
                 CheckError( err , "CreateContext 2" );
             }
 
@@ -1001,6 +1016,14 @@ namespace EH
                 bool operator == ( const ArgumentWrapper& rhs ) const
                 {
                     return index == rhs.index && kernel == rhs.kernel;
+                }
+                bool operator != ( cl_uint id ) const
+                {
+                    return index != id;
+                }
+                bool operator == ( cl_uint id ) const
+                {
+                    return index == id;
                 }
 
                 template < typename T = char >
