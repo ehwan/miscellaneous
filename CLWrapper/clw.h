@@ -973,14 +973,19 @@ namespace EH
                 const T& operator = ( const T& arg ) const
                 {
                     cl_int err = clSetKernelArg( kernel , index , sizeof( T ) , &arg );
-                    CheckError( err , "clSetKernelArg : " , index );
+                    CheckError( err , "clSetKernelArg 1 : " , index );
                     return arg;
                 }
                 const Buffer& operator = ( const Buffer& buf ) const
                 {
                     cl_int err = clSetKernelArg( kernel , index , sizeof( cl_mem ) , &buf.handler );
-                    CheckError( err , "clSetKernelArg : " , index );
+                    CheckError( err , "clSetKernelArg 2 : " , index );
                     return buf;
+                }
+                void Set( size_t size , void *ptr = 0 ) const
+                {
+                    cl_int err = clSetKernelArg( kernel , index , size , ptr );
+                    CheckError( err , "clSetKernelArg 3 : " , index );
                 }
 
                 auto operator [] ( cl_uint id ) const
