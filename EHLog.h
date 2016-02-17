@@ -19,46 +19,6 @@
 
 namespace EH
 {
-    namespace Log
-    {
-#ifndef EH_NO_LOG
-        static std::string log_prefix;
-        void shift( int mv = 1 )
-        {
-            if( mv > 0 )
-            {
-                while( mv-- )
-                {
-                    log_prefix.push_back( '\t' );
-                }
-            }else if( mv < 0 )
-            {
-                mv = -mv;
-                log_prefix.erase( log_prefix.size() - mv , mv );
-            }
-        }
-        void shift_back( int mv = 1 )
-        {
-            shift( -mv );
-        }
-        std::string::size_type shift_pos()
-        {
-            return log_prefix.size();
-        }
-#else
-#define log_prefix ""
-        void shift( int mv = 1 )
-        {
-        }
-        void shift_back( int mv = 1 )
-        {
-        }
-        std::string::size_type shift_pos()
-        {
-            return 0;
-        }
-#endif
-    };
     constexpr const char *ANSI_COLOR_RED    =   "\x1b[31m";
     constexpr const char *ANSI_COLOR_GREEN  =   "\x1b[32m";
     constexpr const char *ANSI_COLOR_YELLOW =   "\x1b[33m";
@@ -83,8 +43,6 @@ namespace EH
     template < typename T , typename ... Ts >
     inline void LOGR( T&& arg0 , Ts&& ... args )
     {
-        using namespace Log;
-        LOGR( log_prefix );
         LOGR( std::forward< T >(arg0) );
         LOGR( std::forward< Ts >( args )... );
     }
