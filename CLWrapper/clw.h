@@ -186,12 +186,18 @@ namespace EH
 
             inline void retain()
             {
-                static_cast< CRTP& >( *this ).retain();
+                if( handler )
+                {
+                    static_cast< CRTP& >( *this ).retain();
+                }
             }
             inline void release()
             {
-                static_cast< CRTP& >( *this ).release();
-                handler = 0;
+                if( handler )
+                {
+                    static_cast< CRTP& >( *this ).release();
+                    handler = 0;
+                }
             }
 
             operator bool () const
@@ -307,19 +313,13 @@ namespace EH
             using parent::operator=;
             void retain()
             {
-                if( handler )
-                {
-                    cl_int err = clRetainDevice( handler );
-                    CheckError( err , "RetainDevice" );
-                }
+                cl_int err = clRetainDevice( handler );
+                CheckError( err , "RetainDevice" );
             }
             void release()
             {
-                if( handler )
-                {
-                    cl_int err = clReleaseDevice( handler );
-                    CheckError( err , "ReleaseDevice" );
-                }
+                cl_int err = clReleaseDevice( handler );
+                CheckError( err , "ReleaseDevice" );
             }
 
             template < typename T = char >
@@ -388,19 +388,13 @@ namespace EH
             using parent::operator=;
             void retain()
             {
-                if( handler )
-                {
-                    cl_int err = clRetainContext( handler );
-                    CheckError( err , "RetainContext" );
-                }
+                cl_int err = clRetainContext( handler );
+                CheckError( err , "RetainContext" );
             }
             void release()
             {
-                if( handler )
-                {
-                    cl_int err = clReleaseContext( handler );
-                    CheckError( err , "ReleaseContext" );
-                }
+                cl_int err = clReleaseContext( handler );
+                CheckError( err , "ReleaseContext" );
             }
 
             Context() :
@@ -480,19 +474,13 @@ namespace EH
             using parent::operator=;
             void retain()
             {
-                if( handler )
-                {
-                    cl_int err = clRetainCommandQueue( handler );
-                    CheckError( err , "RetainCommandQueue" );
-                }
+                cl_int err = clRetainCommandQueue( handler );
+                CheckError( err , "RetainCommandQueue" );
             }
             void release()
             {
-                if( handler )
-                {
-                    cl_int err = clReleaseCommandQueue( handler );
-                    CheckError( err , "ReleaseCommandQueue" );
-                }
+                cl_int err = clReleaseCommandQueue( handler );
+                CheckError( err , "ReleaseCommandQueue" );
             }
 
             Queue() :
@@ -551,19 +539,13 @@ namespace EH
             using parent::operator=;
             void retain()
             {
-                if( handler )
-                {
-                    cl_int err = clRetainMemObject( handler );
-                    CheckError( err , "clRetainMemObject" );
-                }
+                cl_int err = clRetainMemObject( handler );
+                CheckError( err , "clRetainMemObject" );
             }
             void release()
             {
-                if( handler )
-                {
-                    cl_int err = clReleaseMemObject( handler );
-                    CheckError( err , "clReleaseMemObject" );
-                }
+                cl_int err = clReleaseMemObject( handler );
+                CheckError( err , "clReleaseMemObject" );
             }
 
             Buffer() :
@@ -759,19 +741,13 @@ namespace EH
 
             void retain()
             {
-                if( handler )
-                {
-                    cl_int err = clRetainProgram( handler );
-                    CheckError( err , "clRetainProgram" );
-                }
+                cl_int err = clRetainProgram( handler );
+                CheckError( err , "clRetainProgram" );
             }
             void release()
             {
-                if( handler )
-                {
-                    cl_int err = clReleaseProgram( handler );
-                    CheckError( err , "clReleaseProgram" );
-                }
+                cl_int err = clReleaseProgram( handler );
+                CheckError( err , "clReleaseProgram" );
             }
 
             Program() :
@@ -927,19 +903,13 @@ namespace EH
             using parent::operator=;
             void retain()
             {
-                if( handler )
-                {
-                    cl_int err = clRetainKernel( handler );
-                    CheckError( err , "clRetainKernel" );
-                }
+                cl_int err = clRetainKernel( handler );
+                CheckError( err , "clRetainKernel" );
             }
             void release()
             {
-                if( handler )
-                {
-                    cl_int err = clReleaseKernel( handler );
-                    CheckError( err , "clReleaseKernel" );
-                }
+                cl_int err = clReleaseKernel( handler );
+                CheckError( err , "clReleaseKernel" );
             }
 
             Kernel() :
