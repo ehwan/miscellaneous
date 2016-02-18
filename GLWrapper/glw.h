@@ -45,7 +45,7 @@ namespace EH
         {
             using value_type = Handler;
             using this_type = GLObject< Handler , CRTP >;
-            using reference_type = int;
+            using reference_type = std::uint_fast8_t;
 
             Handler handler;
             reference_type *ref;
@@ -298,13 +298,15 @@ namespace EH
             inline void copy_from( const Program& rhs )
             {
         #ifndef NDEBUG
-                //_attributes_map = rhs._attributes_map;
-                //_fragout_map    = rhs._fragout_map;
+                _attributes_map = rhs._attributes_map;
+                _fragout_map    = rhs._fragout_map;
         #endif
             }
             inline void move_from( Program&& rhs )
             {
         #ifndef NDEBUG
+                _attributes_map = std::move( rhs._attributes_map );
+                _fragout_map    = std::move( rhs._fragout_map );
         #endif
             }
             Program() :
