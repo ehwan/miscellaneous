@@ -45,17 +45,30 @@ namespace EH
         {
             using value_type = Handler;
             using this_type = GLObject< Handler , CRTP >;
+            using reference_type = int;
 
             Handler handler;
+            reference_type *ref;
 
             GLObject() :
-                handler( 0 )
+                handler( 0 ) , ref( 0 )
             {
             }
-            GLObject( this_type& rhs )
+            GLObject( const this_type& rhs )
             {
                 handler = rhs.handler;
+                ref     = rhs.ref;
+                copy_from( rhs );
                 retain();
+            }
+            GLObject( this_type&& rhs )
+            {
+                handler = rhs.handler;
+                ref     = rhs.ref;
+                copy_from( rhs );
+                rhs.handler = 0;
+                rhs.ref     = 0;
+                rhs.set_zero();
             }
             /*
             GLObject( const Handler& id )
@@ -69,19 +82,17 @@ namespace EH
             }
             */
 
-            GLObject( this_type&& rhs )
-            {
-                handler = rhs.handler;
-            }
             ~GLObject()
             {
-                if( handler ){ LOG( "GLObject destruct" ); release(); }
+                release();
             }
 
             this_type& operator = ( const this_type& rhs )
             {
                 release();
                 handler = rhs.handler;
+                ref     = rhs.ref;
+                copy_from( rhs );
                 retain();
                 return *this;
             }
@@ -89,7 +100,11 @@ namespace EH
             {
                 release();
                 handler = rhs.handler;
+                ref     = rhs.ref;
+                copy_from( rhs );
                 rhs.handler = 0;
+                rhs.ref     = 0;
+                rhs.set_zero();
                 return *this;
             }
             /*
@@ -110,14 +125,35 @@ namespace EH
 
             inline void load()
             {
+                LOG( "GLObject" , " Construct" );
+                ref = new reference_type( 1 );
             }
             inline void retain()
             {
+                assert( handler != 0 && ref != 0 );
+                ++( *ref );
             }
-            inline void release()
+            void release()
             {
-                static_cast< CRTP& >( *this ).release();
-                handler = 0;
+                if( handler )
+                {
+                    if( --( *ref ) == 0 )
+                    {
+                        LOG( "GLObject" , " Destruct" );
+                        delete ref;
+                        static_cast< CRTP& >( *this ).release();
+                    }
+                    handler = 0;
+                    ref     = 0;
+                }
+            }
+            inline void copy_from( const this_type& rhs )
+            {
+                static_cast< CRTP& >( *this ).copy_from( rhs );
+            }
+            inline void set_zero()
+            {
+                static_cast< CRTP& >( *this ).set_zero();
             }
             inline operator CRTP& ()
             {
@@ -173,6 +209,16 @@ namespace EH
         template < GLenum ShaderType >
         struct Shader : GLObject< GLuint , Shader< ShaderType > >
         {
+            constexpr static const char* ShaderNameFromType()
+            {
+                return ShaderType == GL_VERTEX_SHADER ?
+                            "VertexShader" :
+                            ShaderType == GL_FRAGMENT_SHADER ?
+                                "FragmentShader" :
+                                ShaderType == GL_GEOMETRY_SHADER ?
+                                    "GeometryShader" :
+                                    "UnknownShader" ;
+            }
             using parent = GLObject< GLuint , Shader< ShaderType > >;
             using parent::parent;
             using parent::operator=;
@@ -180,25 +226,14 @@ namespace EH
 
             void release()
             {
-                if( handler )
-                {
-                    glDeleteShader( handler );
-                    CheckError( "glDeleteShader" );
-                }
+                glDeleteShader( handler );
+                CheckError( "glDeleteShader" );
             }
-            static constexpr const char* ShaderNameFromType()
+            void copy_from( const parent& parent )
             {
-                switch( ShaderType )
-                {
-                    default:
-                        return "N/A";
-                    case GL_VERTEX_SHADER:
-                        return "Vertex";
-                    case GL_FRAGMENT_SHADER:
-                        return "Fragment";
-                    case GL_GEOMETRY_SHADER:
-                        return "Geometry";
-                }
+            }
+            void set_zero()
+            {
             }
             Shader() :
                 parent()
@@ -208,6 +243,7 @@ namespace EH
             explicit Shader( std::vector< const GLchar* > strings )
             {
                 handler = glCreateShader( ShaderType );
+                this->load();
                 CheckError( "glCreateShader 1" );
                 glShaderSource( handler , strings.size() , strings.data() , 0 );
                 CheckError( "glShaderSource 1" );
@@ -218,6 +254,7 @@ namespace EH
             explicit Shader( const GLchar *source )
             {
                 handler = glCreateShader( ShaderType );
+                this->load();
                 CheckError( "glCreateShader 2" );
                 glShaderSource( handler , 1 , &source , 0 );
                 CheckError( "glShaderSource 2" );
@@ -233,17 +270,17 @@ namespace EH
                 glGetShaderiv( handler , GL_COMPILE_STATUS , &status );
                 if( status == GL_TRUE )
                 {
-                    LOG( shadername , "Shader compile : " , "SUCCESS" );
+                    LOG( shadername , " compile : " , "SUCCESS" );
                 }else
                 {
-                    LOG( shadername , "Shader compile : " , "Fail" );
+                    LOG( shadername , " compile : " , "Fail" );
                     GLint buflen;
                     glGetShaderiv( handler , GL_INFO_LOG_LENGTH , &buflen );
                     std::vector< GLchar > info_string( buflen+1 );
                     glGetShaderInfoLog( handler , buflen , 0 , info_string.data() );
                     info_string.back() = 0;
 
-                    ERROR( shadername , "Shader Log : \n" , info_string.data() );
+                    ERROR( shadername , " Log : \n" , info_string.data() );
                 }
             }
         };
@@ -259,11 +296,14 @@ namespace EH
             using parent::handler;
             void release()
             {
-                if( handler )
-                {
-                    glDeleteProgram( handler );
-                    CheckError( "glDeleteProgram" );
-                }
+                glDeleteProgram( handler );
+                CheckError( "glDeleteProgram" );
+            }
+            void copy_from( const parent& parent )
+            {
+            }
+            void set_zero()
+            {
             }
             Program() :
                 parent()
@@ -283,6 +323,7 @@ namespace EH
             explicit Program( const Shader< Type0 >& shader0 , const Shader< Types >& ... shaders )
             {
                 handler = glCreateProgram();
+                this->load();
                 GLuint m_shaders[] = { shader0() , shaders() ... };
                 for( auto shader : m_shaders )
                 {
@@ -458,11 +499,14 @@ namespace EH
             using parent::handler;
             void release()
             {
-                if( handler )
-                {
-                    glDeleteVertexArrays( 1 , &handler );
-                    CheckError( "glDeleteVertexArray" );
-                }
+                glDeleteVertexArrays( 1 , &handler );
+                CheckError( "glDeleteVertexArray" );
+            }
+            void copy_from( const parent& parent )
+            {
+            }
+            void set_zero()
+            {
             }
             VertexArray() :
                 parent()
@@ -472,6 +516,7 @@ namespace EH
             VertexArray( create_flag_t create )
             {
                 glGenVertexArrays( 1 , &handler );
+                this->load();
                 CheckError( "glGenVertexArrays" );
             }
             void Begin() const
@@ -534,10 +579,14 @@ namespace EH
             using parent::handler;
             void release()
             {
-                if( handler )
-                {
-                    glDeleteBuffers( 1 , &handler );
-                }
+                glDeleteBuffers( 1 , &handler );
+                CheckError( "glDeleteBuffers" );
+            }
+            void copy_from( const parent& parent )
+            {
+            }
+            void set_zero()
+            {
             }
             Buffer() :
                 parent()
@@ -547,6 +596,7 @@ namespace EH
             explicit Buffer( create_flag_t create )
             {
                 glGenBuffers( 1 , &handler );
+                this->load();
             }
             inline void Begin() const
             {
@@ -624,10 +674,14 @@ namespace EH
             using parent::handler;
             void release()
             {
-                if( handler )
-                {
-                    glDeleteRenderbuffers( 1 , &handler );
-                }
+                glDeleteRenderbuffers( 1 , &handler );
+                CheckError( "glDeleteRenderbuffers" );
+            }
+            void copy_from( const parent& parent )
+            {
+            }
+            void set_zero()
+            {
             }
 
             RenderBuffer() :
@@ -644,6 +698,7 @@ namespace EH
             explicit RenderBuffer( GLsizei width , GLsizei height , GLenum internalformat )
             {
                 glGenRenderbuffers( 1 , &handler );
+                this->load();
                 CheckError( "glGenRednerbuffers" );
                 glBindRenderbuffer( GL_RENDERBUFFER , handler );
                 CheckError( "glBindRenderbuffer" );
@@ -673,20 +728,24 @@ namespace EH
             using parent::handler;
             void release()
             {
-                if( handler )
-                {
-                    glDeleteFramebuffers( 1 , &handler );
-                }
+                glDeleteFramebuffers( 1 , &handler );
+                CheckError( "glDeleteFramebuffers" );
+            }
+            void copy_from( const parent& parent )
+            {
+            }
+            void set_zero()
+            {
             }
             FrameBuffer() :
                 parent()
             {
             }
 
-            FrameBuffer( int Create )
+            FrameBuffer( create_flag_t create )
             {
-                LOG( "Framebuffer Generation;" );
                 glGenFramebuffers( 1 , &handler );
+                this->load();
                 CheckError( "glGenFramebuffer" );
             }
 
@@ -757,6 +816,7 @@ namespace EH
             }
         };  // struct Framebuffer
 
+        /*
         struct Texture : GLObject< GLuint , Texture >
         {
             using parent = GLObject< GLuint , Texture >;
@@ -765,10 +825,14 @@ namespace EH
             using parent::handler;
             void release()
             {
-                if( handler )
-                {
-                    glDeleteTextures( 1 , &handler );
-                }
+                glDeleteTextures( 1 , &handler );
+                CheckError( "glDeleteFramebuffers" );
+            }
+            void copy_from( const parent& parent )
+            {
+            }
+            void set_zero()
+            {
             }
 
             Matrix::vec2< GLsizei > size;
@@ -782,7 +846,7 @@ namespace EH
             {
                 release();
                 handler = rhs.handler;
-                retain();
+                this->retain();
                 size = rhs.size;
                 rhs.handler = 0;
 
@@ -797,6 +861,7 @@ namespace EH
             {
                 assert( size[ 0 ] != 0 && size[ 1 ] != 0 );
                 glGenTextures( 1 , &handler );
+                this->load();
                 CheckError( "GenTextures" );
 
                 glBindTexture( GL_TEXTURE_2D , handler );
@@ -826,7 +891,6 @@ namespace EH
                 CheckError( "glViewport" );
             }
         };
-        /*
 
 #ifndef EH_NO_LODEPNG
         static LodePNGColorType GLType2LonePNGType( GLenum format )
