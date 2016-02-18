@@ -1,3 +1,13 @@
 *.out
 */build/*
 *.s
+EHMatrix
+bullet3
+EHwanEngine
+CLFluid
+test
+lodepng
+static_sequence
+glfw
+glLoadGen
+SIMD Test
