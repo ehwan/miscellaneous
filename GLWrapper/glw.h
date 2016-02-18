@@ -65,10 +65,9 @@ namespace EH
             {
                 handler = rhs.handler;
                 ref     = rhs.ref;
-                copy_from( rhs );
+                move_from( std::move( rhs ) );
                 rhs.handler = 0;
                 rhs.ref     = 0;
-                rhs.set_zero();
             }
             /*
             GLObject( const Handler& id )
@@ -101,10 +100,9 @@ namespace EH
                 release();
                 handler = rhs.handler;
                 ref     = rhs.ref;
-                copy_from( rhs );
+                move_from( std::move( rhs ) );
                 rhs.handler = 0;
                 rhs.ref     = 0;
-                rhs.set_zero();
                 return *this;
             }
             /*
@@ -130,8 +128,10 @@ namespace EH
             }
             inline void retain()
             {
-                assert( handler != 0 && ref != 0 );
-                ++( *ref );
+                if( ref )
+                {
+                    ++( *ref );
+                }
             }
             void release()
             {
@@ -149,11 +149,11 @@ namespace EH
             }
             inline void copy_from( const this_type& rhs )
             {
-                static_cast< CRTP& >( *this ).copy_from( rhs );
+                static_cast< CRTP& >( *this ).copy_from( static_cast< const CRTP& >( rhs ) );
             }
-            inline void set_zero()
+            inline void move_from( this_type&& rhs )
             {
-                static_cast< CRTP& >( *this ).set_zero();
+                static_cast< CRTP& >( *this ).move_from( static_cast< CRTP&& >( rhs ) );
             }
             inline operator CRTP& ()
             {
@@ -229,12 +229,8 @@ namespace EH
                 glDeleteShader( handler );
                 CheckError( "glDeleteShader" );
             }
-            void copy_from( const parent& parent )
-            {
-            }
-            void set_zero()
-            {
-            }
+            inline void copy_from( const Shader& rhs ){}
+            inline void move_from( Shader&& rhs ){}
             Shader() :
                 parent()
             {
@@ -299,11 +295,17 @@ namespace EH
                 glDeleteProgram( handler );
                 CheckError( "glDeleteProgram" );
             }
-            void copy_from( const parent& parent )
+            inline void copy_from( const Program& rhs )
             {
+        #ifndef NDEBUG
+                //_attributes_map = rhs._attributes_map;
+                //_fragout_map    = rhs._fragout_map;
+        #endif
             }
-            void set_zero()
+            inline void move_from( Program&& rhs )
             {
+        #ifndef NDEBUG
+        #endif
             }
             Program() :
                 parent()
@@ -502,12 +504,8 @@ namespace EH
                 glDeleteVertexArrays( 1 , &handler );
                 CheckError( "glDeleteVertexArray" );
             }
-            void copy_from( const parent& parent )
-            {
-            }
-            void set_zero()
-            {
-            }
+            inline void copy_from( const VertexArray& rhs ){}
+            inline void move_from( VertexArray&& rhs ){}
             VertexArray() :
                 parent()
             {
@@ -582,18 +580,24 @@ namespace EH
                 glDeleteBuffers( 1 , &handler );
                 CheckError( "glDeleteBuffers" );
             }
-            void copy_from( const parent& parent )
+            inline void copy_from( const Buffer< Target >& rhs )
             {
+                size = rhs.size;
             }
-            void set_zero()
+            void move_from( Buffer< Target >&& rhs )
             {
+                size = rhs.size;
+                rhs.size = 0;
             }
             Buffer() :
-                parent()
+                parent() , size( 0 )
             {
             }
 
-            explicit Buffer( create_flag_t create )
+            std::size_t size;
+
+            explicit Buffer( create_flag_t create ) :
+                size( 0 )
             {
                 glGenBuffers( 1 , &handler );
                 this->load();
@@ -624,8 +628,9 @@ namespace EH
                 COPY
                 The data store contents are modified by reading data from the GL, and used as the source for GL drawing and image specification commands
             */
-            void BufferData( GLsizei size , GLenum usage , GLvoid *data = 0 )
+            void BufferData( GLsizei _size , GLenum usage , GLvoid *data = 0 )
             {
+                size = _size;
                 glBufferData( Target , size , data , usage );
                 CheckError( "glBufferData" );
             }
@@ -677,12 +682,8 @@ namespace EH
                 glDeleteRenderbuffers( 1 , &handler );
                 CheckError( "glDeleteRenderbuffers" );
             }
-            void copy_from( const parent& parent )
-            {
-            }
-            void set_zero()
-            {
-            }
+            inline void copy_from( const RenderBuffer& rhs ){}
+            inline void move_from( RenderBuffer&& rhs ){}
 
             RenderBuffer() :
                 parent()
@@ -731,12 +732,8 @@ namespace EH
                 glDeleteFramebuffers( 1 , &handler );
                 CheckError( "glDeleteFramebuffers" );
             }
-            void copy_from( const parent& parent )
-            {
-            }
-            void set_zero()
-            {
-            }
+            inline void copy_from( const FrameBuffer& rhs ){}
+            inline void move_from( FrameBuffer&& rhs ){}
             FrameBuffer() :
                 parent()
             {
@@ -816,7 +813,6 @@ namespace EH
             }
         };  // struct Framebuffer
 
-        /*
         struct Texture : GLObject< GLuint , Texture >
         {
             using parent = GLObject< GLuint , Texture >;
@@ -828,11 +824,14 @@ namespace EH
                 glDeleteTextures( 1 , &handler );
                 CheckError( "glDeleteFramebuffers" );
             }
-            void copy_from( const parent& parent )
+            inline void copy_from( const Texture& rhs )
             {
+                size = rhs.size;
             }
-            void set_zero()
+            void move_from( Texture&& rhs )
             {
+                size = rhs.size;
+                rhs.size = 0;
             }
 
             Matrix::vec2< GLsizei > size;
@@ -842,27 +841,22 @@ namespace EH
             {
             }
 
-            Texture& operator = ( Texture&& rhs )
+            Texture( create_flag_t create ) :
+                size( 0 )
             {
-                release();
-                handler = rhs.handler;
-                this->retain();
-                size = rhs.size;
-                rhs.handler = 0;
-
-                return *this;
-            }
-            void Load(  GLvoid *data ,
-                        GLenum internalformat ,
-                        GLenum format ,
-                        GLenum type ,
-                        GLfloat filter = GL_NEAREST ,
-                        GLfloat edgeprm = GL_CLAMP_TO_EDGE )
-            {
-                assert( size[ 0 ] != 0 && size[ 1 ] != 0 );
                 glGenTextures( 1 , &handler );
                 this->load();
                 CheckError( "GenTextures" );
+            }
+
+            void Load( GLvoid *data ,
+                       GLenum internalformat ,
+                       GLenum format ,
+                       GLenum type ,
+                       GLfloat filter = GL_NEAREST ,
+                       GLfloat edgeprm = GL_CLAMP_TO_EDGE )
+            {
+                assert( size[ 0 ] != 0 && size[ 1 ] != 0 );
 
                 glBindTexture( GL_TEXTURE_2D , handler );
                 CheckError( "BindTexture" );
@@ -892,6 +886,7 @@ namespace EH
             }
         };
 
+            /*
 #ifndef EH_NO_LODEPNG
         static LodePNGColorType GLType2LonePNGType( GLenum format )
         {

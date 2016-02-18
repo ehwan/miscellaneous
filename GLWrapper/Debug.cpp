@@ -10,7 +10,6 @@ namespace EH
 #ifndef EH_NO_DEBUG_DRAW
             GL::VertexArray vao;
             GL::VertexBuffer vbo;
-            std::size_t cur_size = 0;
             GL::Program program;
             GL::VertexShader vertexS;
             GL::FragmentShader fragmentS;
@@ -145,10 +144,9 @@ namespace EH
                     vbo = VertexBuffer( create_flag ).Move();
                 }
                 vbo.Begin();
-                if( cur_size < sizeof(GLfloat) * vertices.size() )
+                if( vbo.size < sizeof(GLfloat) * vertices.size() )
                 {
-                    cur_size = sizeof( GLfloat )*vertices.size()*2;
-                    vbo.BufferData( cur_size , GL_DYNAMIC_DRAW , vertices.data() );
+                    vbo.BufferData( sizeof( GLfloat )*vertices.size()*2 , GL_DYNAMIC_DRAW , vertices.data() );
                 }else
                 {
                     vbo.SubData( 0 , sizeof( GLfloat )*vertices.size() , vertices.data() );
