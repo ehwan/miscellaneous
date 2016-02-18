@@ -416,7 +416,7 @@ namespace EH
                                            &err );
                 CheckError( err , "CreateContext 1" );
             }
-            template < typename Container , typename = decltype( std::begin( Container() ) ) >
+            template < typename Container , typename = decltype( std::begin( std::declval< Container >() ) ) >
             explicit Context( Container&& devices , const cl_context_properties *properties = 0 )
             {
                 Context( std::begin( devices ) , std::end( devices ) , properties );
@@ -838,7 +838,7 @@ namespace EH
                     build_check( *begin );
                 }
             }
-            template < typename Container , typename = decltype( std::begin( Container() ) ) >
+            template < typename Container , typename = decltype( std::begin( std::declval< Container >() ) ) >
             void build( Container&& devices , const char *options = 0 ) const
             {
                 build( std::begin( devices ) , std::end( devices ) , options );
