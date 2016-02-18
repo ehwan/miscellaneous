@@ -24,7 +24,6 @@ namespace EH
         explicit Ptr( std::size_t _count )
         {
             ptr = new value_type[ _count ];
-            std::cout << "alloced " << sizeof( value_type ) * _count << " bytes\n";
         }
         Ptr( value_type *rhs )
         {
@@ -33,7 +32,6 @@ namespace EH
         template < typename T2 >
         Ptr( other_type< T2 >&& rhs )
         {
-            std::cout << "move\n";
             move_from( rhs );
         }
         ~Ptr()
@@ -48,7 +46,6 @@ namespace EH
         {
             if( ptr )
             {
-                std::cout << "freed\n";
                 delete[] ptr;
                 ptr = 0;
             }
