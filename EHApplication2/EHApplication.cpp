@@ -74,7 +74,6 @@ namespace EH
             std::exit( 1 );
         }
     #endif
-
         window = glfwCreateWindow( w , h , title , 0 , 0 );
         if( window == 0 )
         {
@@ -86,6 +85,9 @@ namespace EH
         glfwSetKeyCallback( window , key_callback );
         glfwSetCursorPosCallback( window , cursor_pos_callback );
         glfwSetMouseButtonCallback( window , mouse_button_callback );
+
+        MakeCurrent();
+        GL::LoadGLFunctions();
     }
     Window::~Window()
     {

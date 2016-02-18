@@ -17,10 +17,10 @@ struct MyFrame : public EH::Frame< MyFrame >
 int main()
 {
     EH::Application appli;
-    EH::Window window( "Test Window" , 500 , 500 );
+    EH::Window window( "Tet Window" , 500 , 500 );
 
-    window.MakeCurrent();
-    EH::GL::LoadGLFunctions();
+    //window.MakeCurrent();
+    //EH::GL::LoadGLFunctions();
 
     const EH::Matrix::mat4f projection =
         EH::Matrix::Util::OrthologMatrix< 4 >(

@@ -33,6 +33,8 @@ namespace EH
     };
     class Window
     {
+        friend class FrameBase;
+
         using window_type = GLFWwindow*;
     public:
         Window() :
@@ -100,7 +102,7 @@ namespace EH
 
     public:
         FrameBase() :
-            parent( 0 ) , window( 0 ) , bound_min( 0 ) , bound_max( 0 )
+            parent( 0 ) , window( 0 ) , bound_min( -1 ) , bound_max( 1 )
         {
             max_gap = std::chrono::duration_cast< clock::duration >( std::chrono::duration< int , std::ratio< 1 , 30 > >( 1 ) );
             min_gap = std::chrono::duration_cast< clock::duration >( std::chrono::duration< int , std::ratio< 1 , 60 > >( 1 ) );
