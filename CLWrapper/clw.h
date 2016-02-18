@@ -9,12 +9,14 @@
 
 #ifdef NDEBUG
     #define EH_NO_CL_LOG
+    #define EH_NO_CL_DEBUG
 #endif
 
 namespace EH
 {
     namespace cl
     {
+        struct empty_s{};
 #ifndef EH_NO_CL_LOG
         constexpr const char* err2str[] =
         {
@@ -104,33 +106,60 @@ namespace EH
             }
 #endif
         }
-        template < typename T , typename CRTP >
+        template < typename T , typename CRTP , typename UserData = empty_s , typename DebugData = empty_s >
         struct CLObject
         {
             using this_type = CLObject< T , CRTP >;
+            using user_data_type = UserData;
+            using debug_data_type = DebugData;
 
             T handler;
+#ifndef EH_NO_CL_DEBUG
+            debug_data_type debug_data;
+#endif
+            user_data_type data;
 
             CLObject() :
-                handler( 0 )
+                handler( 0 ) ,
+#ifndef EH_NO_CL_DEBUG
+                debug_data() ,
+#endif
+                data()
+
             {
             }
-            CLObject( const this_type& rhs )
+            CLObject( const this_type& rhs ) :
+#ifndef EH_NO_CL_DEBUG
+                debug_data( rhs.debug_data ) ,
+#endif
+                data( rhs.data )
             {
                 handler = rhs.handler;
                 retain();
             }
-            CLObject( const T& id )
+            CLObject( const T& id ) :
+#ifndef EH_NO_CL_DEBUG
+                debug_data() ,
+#endif
+                data()
             {
                 handler = id;
                 retain();
             }
-            CLObject( this_type&& rhs )
+            CLObject( this_type&& rhs ) :
+#ifndef EH_NO_CL_DEBUG
+                debug_data( std::move( rhs.debug_data ) ) ,
+#endif
+                data( std::move( rhs.data ) )
             {
                 handler = rhs.handler;
                 rhs.handler = 0;
             }
-            CLObject( T&& id )
+            CLObject( T&& id ) :
+#ifndef EH_NO_CL_DEBUG
+                debug_data() ,
+#endif
+                data()
             {
                 handler = id;
             }
@@ -142,9 +171,14 @@ namespace EH
             {
                 release();
                 handler = rhs.handler;
+#ifndef EH_NO_CL_DEBUG
+                debug_data = rhs.debug_data;
+#endif
+                data = rhs.data;
                 retain();
                 return static_cast< CRTP& >( *this );
             }
+            /*
             CRTP& operator = ( const T& id )
             {
                 release();
@@ -152,19 +186,26 @@ namespace EH
                 retain();
                 return static_cast< CRTP& >( *this );
             }
+            */
             CRTP& operator = ( this_type&& rhs )
             {
                 release();
                 handler = rhs.handler;
+#ifndef EH_NO_CL_DEBUG
+                debug_data = std::move( rhs.debug_data );
+#endif
+                data = std::move( rhs.data );
                 rhs.handler = 0;
                 return static_cast< CRTP& >( *this );
             }
+            /*
             CRTP& operator = ( T&& id )
             {
                 release();
                 handler = id;
                 return static_cast< CRTP& >( *this );
             }
+            */
 
             operator CRTP& ()
             {
@@ -176,10 +217,6 @@ namespace EH
             }
 
             inline T operator ()() const
-            {
-                return handler;
-            }
-            inline operator T() const
             {
                 return handler;
             }
