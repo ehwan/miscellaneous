@@ -6,6 +6,7 @@
 #include <string>
 #include <memory>
 #include <sstream>
+#include <tuple>
 
 #ifdef NDEBUG
     #define EH_CL_NO_LOG
@@ -859,10 +860,7 @@ namespace EH
                         //break;
                     case CL_BUILD_ERROR:
                     {
-                        ERROR( "Build error;------------" );
-                        auto ret = getBuildInfo( device , CL_PROGRAM_BUILD_LOG );
-                        LOG( std::string( ret.begin() , ret.end() ) );
-                        ERROR( "Log End; ---------------" );
+                        ERROR( "Build Failed" );
                         break;
                     }
                     case CL_BUILD_SUCCESS:
@@ -873,6 +871,10 @@ namespace EH
                     //case CL_BUILD_IN_PROGRESS:
                         //break;
                 }
+                LOG( "program build log : ---------------" );
+                auto ret = getBuildInfo( device , CL_PROGRAM_BUILD_LOG );
+                LOG( std::string( ret.begin() , ret.end() ) );
+                LOG( "Log end; --------------------------" );
             }
             template < typename IterType >
             void build( IterType&& begin , IterType&& end , const char *options = 0 ) const
@@ -994,15 +996,16 @@ namespace EH
                 CheckError( err , "clCreateKernel : " , name );
             }
 
-            template < typename T >
-            void SetArg( cl_uint index , const T *arg )
+            template < std::size_t ID = 0 , typename T0 >
+            void SetArguments( T0&& arg0 )
             {
-                cl_int err = clSetKernelArg( handler , index , sizeof( T ) , arg );
-                CheckError( err , "clSetKernelArg : " , index );
+                this->operator[]( ID ) = arg0;
             }
-            inline void SetArg( cl_uint index , const Buffer& buf )
+            template < std::size_t ID = 0 , typename T0 , typename ... Ts >
+            void SetArguments( T0&& arg0 , Ts&& ... args )
             {
-                SetArg( index , &buf.handler );
+                this->operator[]( ID ) = arg0;
+                SetArguments< ID + 1 >( std::forward< Ts >( args )... );
             }
 
             struct ArgumentWrapper
