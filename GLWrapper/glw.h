@@ -21,12 +21,15 @@
 
 #ifdef NDEBUG
     #define EH_GL_NO_LOG
+    #define EH_GL_NO_DEBUG
 #endif
 
 namespace EH
 {
     namespace GL
     {
+        struct empty_s{};
+        struct empty_s2{};
         static inline void LoadGLFunctions()
         {
             if( ogl_LoadFunctions() == ogl_LOAD_FAILED )
@@ -40,100 +43,97 @@ namespace EH
         struct create_flag_t{};
         constexpr static create_flag_t create_flag;
 
-        template < typename Handler , typename CRTP >
-        struct GLObject
+        template < typename Handler , typename CRTP , typename UserData = empty_s , typename DebugData = empty_s2 >
+        struct GLObject : UserData
+#ifndef EH_GL_NO_DEBUG
+                , DebugData
+#endif
         {
             using value_type = Handler;
-            using this_type = GLObject< Handler , CRTP >;
+            using this_type = GLObject< Handler , CRTP , UserData , DebugData >;
             using reference_type = std::uint_fast8_t;
+            using user_data_type = UserData;
+            using debug_data_type = DebugData;
 
             Handler handler;
             reference_type *ref;
 
             GLObject() :
+                user_data_type() ,
+#ifndef EH_GL_NO_DEBUG
+                debug_data_type() ,
+#endif
                 handler( 0 ) , ref( 0 )
             {
             }
-            GLObject( const this_type& rhs )
+            GLObject( const this_type& rhs ) :
+                user_data_type( static_cast< const user_data_type& >( rhs ) ) ,
+#ifndef EH_GL_NO_DEBUG
+                debug_data_type( static_cast< const debug_data_type& >( rhs ) ) ,
+#endif
+                handler( rhs.handler ) , ref( rhs.ref )
             {
-                handler = rhs.handler;
-                ref     = rhs.ref;
-                copy_from( rhs );
-                retain();
+                //copy_from( rhs );
+                _private_retain();
             }
-            GLObject( this_type&& rhs )
+            GLObject( this_type&& rhs ) :
+                user_data_type( static_cast< user_data_type&& >( rhs ) ) ,
+#ifndef EH_GL_NO_DEBUG
+                debug_data_type( static_cast< debug_data_type&& >( rhs ) ) ,
+#endif
+                handler( rhs.handler ) , ref( rhs.ref )
             {
-                handler = rhs.handler;
-                ref     = rhs.ref;
-                move_from( std::move( rhs ) );
+                //move_from( std::move( rhs ) );
                 rhs.handler = 0;
                 rhs.ref     = 0;
             }
-            /*
-            GLObject( const Handler& id )
-            {
-                handler = id;
-                retain();
-            }
-            GLObject( Handler&& id )
-            {
-                handler = id;
-            }
-            */
 
             ~GLObject()
             {
-                release();
+                _private_release();
             }
 
-            this_type& operator = ( const this_type& rhs )
+            CRTP& operator = ( const this_type& rhs )
             {
-                release();
+                _private_release();
+                user_data_type::operator = ( static_cast< const user_data_type& >( rhs ) );
+#ifndef EH_GL_NO_DEBUG
+                debug_data_type::operator = ( static_cast< const debug_data_type& >( rhs ) );
+#endif
                 handler = rhs.handler;
                 ref     = rhs.ref;
-                copy_from( rhs );
-                retain();
-                return *this;
+                //copy_from( rhs );
+                _private_retain();
+
+                return static_cast< CRTP& >( *this );
             }
-            this_type& operator = ( this_type&& rhs )
+            CRTP& operator = ( this_type&& rhs )
             {
-                release();
+                _private_release();
+
+                user_data_type::operator = ( static_cast< user_data_type&& >( rhs ) );
+#ifndef EH_GL_NO_DEBUG
+                debug_data_type::operator = ( static_cast< debug_data_type&& >( rhs ) );
+#endif
                 handler = rhs.handler;
                 ref     = rhs.ref;
-                move_from( std::move( rhs ) );
+                //move_from( std::move( rhs ) );
                 rhs.handler = 0;
                 rhs.ref     = 0;
-                return *this;
+
+                return static_cast< CRTP& >( *this );
             }
-            /*
-            this_type& operator = ( const Handler& id )
-            {
-                release();
-                handler = id;
-                retain();
-                return *this;
-            }
-            this_type& operator = ( Handler&& id )
-            {
-                release();
-                handler = id;
-                return *this;
-            }
-            */
 
             inline void load()
             {
                 LOG( "GLObject" , " Construct" );
                 ref = new reference_type( 1 );
             }
-            inline void retain()
+            inline void _private_retain()
             {
-                if( ref )
-                {
-                    ++( *ref );
-                }
+                static_cast< CRTP& >( *this ).retain();
             }
-            void release()
+            void _private_release()
             {
                 if( handler )
                 {
@@ -147,13 +147,15 @@ namespace EH
                     ref     = 0;
                 }
             }
-            inline void copy_from( const this_type& rhs )
+            void retain()
             {
-                static_cast< CRTP& >( *this ).copy_from( static_cast< const CRTP& >( rhs ) );
+                if( ref )
+                {
+                    ++( *ref );
+                }
             }
-            inline void move_from( this_type&& rhs )
+            void release()
             {
-                static_cast< CRTP& >( *this ).move_from( static_cast< CRTP&& >( rhs ) );
             }
             inline operator CRTP& ()
             {
@@ -163,6 +165,26 @@ namespace EH
             {
                 return static_cast< const CRTP& >( *this );
             }
+            inline operator user_data_type& ()
+            {
+                return static_cast< user_data_type& >( *this );
+            }
+#ifndef EH_GL_NO_DEBUG
+            inline operator debug_data_type& ()
+            {
+                return static_cast< debug_data_type& >( *this );
+            }
+#endif
+            inline operator const user_data_type& () const
+            {
+                return static_cast< const user_data_type& >( *this );
+            }
+#ifndef EH_GL_NO_DEBUG
+            inline operator const debug_data_type& () const
+            {
+                return static_cast< const debug_data_type& >( *this );
+            }
+#endif
             inline Handler operator () () const
             {
                 return handler;
@@ -229,8 +251,6 @@ namespace EH
                 glDeleteShader( handler );
                 CheckError( "glDeleteShader" );
             }
-            inline void copy_from( const Shader& rhs ){}
-            inline void move_from( Shader&& rhs ){}
             Shader() :
                 parent()
             {
@@ -284,9 +304,39 @@ namespace EH
         using FragmentShader = Shader< GL_FRAGMENT_SHADER >;
         using GeometryShader = Shader< GL_GEOMETRY_SHADER >;
 
-        struct Program : GLObject< GLuint , Program >
+        namespace Debug
         {
-            using parent = GLObject< GLuint , Program >;
+            struct program_debug_s
+            {
+                typedef std::unordered_map< GLuint , std::string > attribs_map_type;
+                attribs_map_type _attributes_map;
+
+                attribs_map_type _fragout_map;
+
+                void BindAttribLocation( GLuint index , const GLchar *name )
+                {
+                    auto state = _attributes_map.emplace( index , name );
+                    if( state.second == false )
+                    {
+                        ERROR( "Invalid attribute binding : " , name , " at " , index );
+                        ERROR( "Already binded with : " , _attributes_map.find( index )->second );
+                    }
+                }
+                void BindFragDataLocation( GLuint index , const GLchar *name )
+                {
+                    auto state = _fragout_map.emplace( index , name );
+                    if( state.second == false )
+                    {
+                        ERROR( "Invalid FragData binding : " , name , " at " , index );
+                        ERROR( "Already binded with : " , _fragout_map.find( index )->second );
+                    }
+                }
+            };
+        };
+
+        struct Program : GLObject< GLuint , Program , empty_s , Debug::program_debug_s >
+        {
+            using parent = GLObject< GLuint , Program , empty_s , Debug::program_debug_s >;
             using parent::parent;
             using parent::operator=;
             using parent::handler;
@@ -295,32 +345,10 @@ namespace EH
                 glDeleteProgram( handler );
                 CheckError( "glDeleteProgram" );
             }
-            inline void copy_from( const Program& rhs )
-            {
-        #ifndef NDEBUG
-                _attributes_map = rhs._attributes_map;
-                _fragout_map    = rhs._fragout_map;
-        #endif
-            }
-            inline void move_from( Program&& rhs )
-            {
-        #ifndef NDEBUG
-                _attributes_map = std::move( rhs._attributes_map );
-                _fragout_map    = std::move( rhs._fragout_map );
-        #endif
-            }
             Program() :
                 parent()
             {
             }
-
-        #ifndef NDEBUG
-            // for error debuging
-            typedef std::unordered_map< GLuint , std::string > attribs_map_type;
-            attribs_map_type _attributes_map;
-
-            attribs_map_type _fragout_map;
-        #endif
 
 
             template < GLenum Type0 , GLenum ... Types >
@@ -357,12 +385,7 @@ namespace EH
             void BindAttribLocation( GLuint index , const GLchar *name )
             {
             #ifndef NDEBUG
-                auto state = _attributes_map.emplace( index , name );
-                if( state.second == false )
-                {
-                    ERROR( "Invalid attribute binding : " , name , " at " , index );
-                    ERROR( "Already binded with : " , _attributes_map.find( index )->second );
-                }
+                Debug::program_debug_s::BindAttribLocation( index , name );
             #endif
                 glBindAttribLocation( handler , index,  name );
                 CheckError( "glBindAttribLocation : " , name );
@@ -378,12 +401,7 @@ namespace EH
             void BindFragDataLocation( GLuint index , const GLchar *name )
             {
             #ifndef NDEBUG
-                auto state = _fragout_map.emplace( index , name );
-                if( state.second == false )
-                {
-                    ERROR( "Invalid FragData binding : " , name , " at " , index );
-                    ERROR( "Already binded with : " , _fragout_map.find( index )->second );
-                }
+                Debug::program_debug_s::BindFragDataLocation( index , name );
             #endif
                 glBindFragDataLocation( handler , index , name );
                 CheckError( "glBindFragDataLocation : " , name );
@@ -506,8 +524,6 @@ namespace EH
                 glDeleteVertexArrays( 1 , &handler );
                 CheckError( "glDeleteVertexArray" );
             }
-            inline void copy_from( const VertexArray& rhs ){}
-            inline void move_from( VertexArray&& rhs ){}
             VertexArray() :
                 parent()
             {
@@ -570,36 +586,35 @@ namespace EH
         };
 
 
-        template < GLenum Target >
-        struct Buffer : GLObject< GLuint , Buffer< Target > >
+        struct buffer_data
         {
-            using parent = GLObject< GLuint , Buffer< Target > >;
+            size_t size;
+
+            buffer_data() :
+                size( 0 )
+            {
+            }
+        };
+        template < GLenum Target >
+        struct Buffer : GLObject< GLuint , Buffer< Target > , buffer_data >
+        {
+            using parent = GLObject< GLuint , Buffer< Target > , buffer_data >;
             using parent::parent;
             using parent::operator=;
             using parent::handler;
+            using buffer_data::size;
+
             void release()
             {
                 glDeleteBuffers( 1 , &handler );
                 CheckError( "glDeleteBuffers" );
             }
-            inline void copy_from( const Buffer< Target >& rhs )
-            {
-                size = rhs.size;
-            }
-            void move_from( Buffer< Target >&& rhs )
-            {
-                size = rhs.size;
-                rhs.size = 0;
-            }
             Buffer() :
-                parent() , size( 0 )
+                parent()
             {
             }
 
-            std::size_t size;
-
-            explicit Buffer( create_flag_t create ) :
-                size( 0 )
+            explicit Buffer( create_flag_t create )
             {
                 glGenBuffers( 1 , &handler );
                 this->load();
@@ -684,9 +699,6 @@ namespace EH
                 glDeleteRenderbuffers( 1 , &handler );
                 CheckError( "glDeleteRenderbuffers" );
             }
-            inline void copy_from( const RenderBuffer& rhs ){}
-            inline void move_from( RenderBuffer&& rhs ){}
-
             RenderBuffer() :
                 parent()
             {
@@ -734,8 +746,6 @@ namespace EH
                 glDeleteFramebuffers( 1 , &handler );
                 CheckError( "glDeleteFramebuffers" );
             }
-            inline void copy_from( const FrameBuffer& rhs ){}
-            inline void move_from( FrameBuffer&& rhs ){}
             FrameBuffer() :
                 parent()
             {
@@ -815,36 +825,33 @@ namespace EH
             }
         };  // struct Framebuffer
 
-        struct Texture : GLObject< GLuint , Texture >
+        struct texture_data
         {
-            using parent = GLObject< GLuint , Texture >;
+            Matrix::vec2< GLsizei > size;
+
+            texture_data() :
+                size( 0 )
+            {
+            }
+        };
+        struct Texture : GLObject< GLuint , Texture , texture_data >
+        {
+            using parent = GLObject< GLuint , Texture , texture_data >;
             using parent::parent;
             using parent::operator=;
             using parent::handler;
+            using texture_data::size;
             void release()
             {
                 glDeleteTextures( 1 , &handler );
                 CheckError( "glDeleteFramebuffers" );
             }
-            inline void copy_from( const Texture& rhs )
-            {
-                size = rhs.size;
-            }
-            void move_from( Texture&& rhs )
-            {
-                size = rhs.size;
-                rhs.size = 0;
-            }
-
-            Matrix::vec2< GLsizei > size;
-
             Texture() :
-                parent() , size( 0 )
+                parent()
             {
             }
 
-            Texture( create_flag_t create ) :
-                size( 0 )
+            Texture( create_flag_t create )
             {
                 glGenTextures( 1 , &handler );
                 this->load();

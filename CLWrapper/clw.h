@@ -8,8 +8,8 @@
 #include <sstream>
 
 #ifdef NDEBUG
-    #define EH_NO_CL_LOG
-    #define EH_NO_CL_DEBUG
+    #define EH_CL_NO_LOG
+    #define EH_CL_NO_DEBUG
 #endif
 
 namespace EH
@@ -17,7 +17,8 @@ namespace EH
     namespace cl
     {
         struct empty_s{};
-#ifndef EH_NO_CL_LOG
+        struct empty_s2{};
+#ifndef EH_CL_NO_LOG
         constexpr const char* err2str[] =
         {
             "CL_SUCCESS"                                  , // 0
@@ -83,7 +84,7 @@ namespace EH
 #endif
         static const char* Err2String( cl_int err )
         {
-#ifndef EH_NO_CL_LOG
+#ifndef EH_CL_NO_LOG
             err = -err;
             if( err <= 19 )
             {
@@ -99,83 +100,85 @@ namespace EH
         template < typename ... Ts >
         void CheckError( cl_int err , Ts&& ... args )
         {
-#ifndef EH_NO_CL_LOG
+#ifndef EH_CL_NO_LOG
             if( err )
             {
                 ERROR( std::forward< Ts >( args )... , " / Name : " , Err2String( err ) , " / Code : " , err );
             }
 #endif
         }
-        template < typename T , typename CRTP , typename UserData = empty_s , typename DebugData = empty_s >
-        struct CLObject
+        template < typename Handler , typename CRTP , typename UserData = empty_s , typename DebugData = empty_s2 >
+        struct CLObject : public UserData , DebugData
         {
-            using this_type = CLObject< T , CRTP >;
+            using this_type = CLObject< Handler , CRTP , UserData , DebugData >;
+            using handler_type = Handler;
             using user_data_type = UserData;
             using debug_data_type = DebugData;
 
-            T handler;
-#ifndef EH_NO_CL_DEBUG
-            debug_data_type debug_data;
-#endif
-            user_data_type data;
+            handler_type handler;
 
             CLObject() :
-                handler( 0 ) ,
-#ifndef EH_NO_CL_DEBUG
-                debug_data() ,
+                user_data_type() ,
+#ifndef EH_CL_NO_DEBUG
+                debug_data_type() ,
 #endif
-                data()
+                handler( 0 )
 
             {
             }
             CLObject( const this_type& rhs ) :
-#ifndef EH_NO_CL_DEBUG
-                debug_data( rhs.debug_data ) ,
+                user_data_type( static_cast< const user_data_type& >( rhs ) ) ,
+#ifndef EH_CL_NO_DEBUG
+                debug_data_type( static_cast< const debug_data_type& >( rhs ) ) ,
 #endif
-                data( rhs.data )
+                handler( rhs.handler )
             {
-                handler = rhs.handler;
-                retain();
+                //handler = rhs.handler;
+                _private_retain();
             }
-            CLObject( const T& id ) :
-#ifndef EH_NO_CL_DEBUG
-                debug_data() ,
+            CLObject( const handler_type& id ) :
+                user_data_type() ,
+#ifndef EH_CL_NO_DEBUG
+                debug_data_type() ,
 #endif
-                data()
+                handler( id )
             {
-                handler = id;
-                retain();
+                //handler = id;
+                _private_retain();
             }
             CLObject( this_type&& rhs ) :
-#ifndef EH_NO_CL_DEBUG
-                debug_data( std::move( rhs.debug_data ) ) ,
+                user_data_type( static_cast< user_data_type&& >( rhs ) ) ,
+#ifndef EH_CL_NO_DEBUG
+                debug_data_type( static_cast< debug_data_type&& >( rhs ) ) ,
 #endif
-                data( std::move( rhs.data ) )
+                handler( rhs.handler )
             {
-                handler = rhs.handler;
+                //handler = rhs.handler;
                 rhs.handler = 0;
             }
-            CLObject( T&& id ) :
-#ifndef EH_NO_CL_DEBUG
-                debug_data() ,
+            CLObject( handler_type&& id ) :
+                user_data_type() ,
+#ifndef EH_CL_NO_DEBUG
+                debug_data_type() ,
 #endif
-                data()
+                handler( id )
             {
-                handler = id;
+                //handler = id;
             }
             ~CLObject()
             {
-                release();
+                _private_release();
             }
             CRTP& operator = ( const this_type& rhs )
             {
-                release();
-                handler = rhs.handler;
-#ifndef EH_NO_CL_DEBUG
-                debug_data = rhs.debug_data;
+                _private_release();
+                user_data_type::operator = ( static_cast< const user_data_type& >( rhs ) );
+#ifndef EH_CL_NO_DEBUG
+                debug_data_type::operator = ( static_cast< const debug_data_type& >( rhs ) );
 #endif
-                data = rhs.data;
-                retain();
+                handler = rhs.handler;
+                _private_retain();
+
                 return static_cast< CRTP& >( *this );
             }
             /*
@@ -189,13 +192,14 @@ namespace EH
             */
             CRTP& operator = ( this_type&& rhs )
             {
-                release();
-                handler = rhs.handler;
-#ifndef EH_NO_CL_DEBUG
-                debug_data = std::move( rhs.debug_data );
+                _private_release();
+                user_data_type::operator = ( static_cast< user_data_type&& >( rhs ) );
+#ifndef EH_CL_NO_DEBUG
+                debug_data_type::operator = ( static_cast< debug_data_type&& >( rhs ) );
 #endif
-                data = std::move( rhs.data );
+                handler = rhs.handler;
                 rhs.handler = 0;
+
                 return static_cast< CRTP& >( *this );
             }
             /*
@@ -211,30 +215,58 @@ namespace EH
             {
                 return static_cast< CRTP& >( *this );
             }
+            operator user_data_type& ()
+            {
+                return static_cast< user_data_type& >( *this );
+            }
+#ifndef EH_CL_NO_DEBUG
+            operator debug_data_type& ()
+            {
+                return static_cast< debug_data_type& >( *this );
+            }
+#endif
             operator const CRTP& () const
             {
                 return static_cast< const CRTP& >( *this );
             }
+            operator const user_data_type& () const
+            {
+                return static_cast< const user_data_type& >( *this );
+            }
+#ifndef EH_CL_NO_DEBUG
+            operator const debug_data_type& () const
+            {
+                return static_cast< const debug_data_type& >( *this );
+            }
+#endif
 
-            inline T operator ()() const
+            inline handler_type operator ()() const
             {
                 return handler;
             }
 
-            inline void retain()
+            void _private_retain()
             {
                 if( handler )
                 {
                     static_cast< CRTP& >( *this ).retain();
                 }
             }
-            inline void release()
+            void _private_release()
             {
                 if( handler )
                 {
                     static_cast< CRTP& >( *this ).release();
                     handler = 0;
                 }
+
+            }
+
+            void retain()
+            {
+            }
+            void release()
+            {
             }
 
             operator bool () const
@@ -264,8 +296,10 @@ namespace EH
             using parent = CLObject< cl_platform_id , Platform >;
             using parent::parent;
             using parent::operator=;
-            void retain(){ }
-            void release(){ }
+            Platform() :
+                parent()
+            {
+            }
 
             static std::vector< Platform > get()
             {
