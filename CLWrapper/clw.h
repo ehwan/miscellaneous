@@ -632,17 +632,6 @@ namespace EH
                 clFlush( handler );
             }
         };
-        struct buffer_map_deleter
-        {
-            cl_mem buffer;
-            Queue queue;
-
-            void operator () ( void *ptr )
-            {
-                cl_int err = clEnqueueUnmapMemObject( queue() , buffer , ptr , 0 , 0 , 0 );
-                CheckError( err , "clEnqueueUnmapMemObject" );
-            }
-        };
         class Buffer : public CLObject< cl_mem , Buffer >
         {
         protected:
@@ -805,8 +794,19 @@ namespace EH
                 CheckError( err , "clEnqueueFillBuffer" );
             }
 
+            struct map_deleter_s
+            {
+                cl_mem buffer;
+                cl_command_queue queue;
+
+                inline void operator () ( void *ptr )
+                {
+                    cl_int err = clEnqueueUnmapMemObject( queue , buffer , ptr , 0 , 0 , 0 );
+                    CheckError( err , "clEnqueueUnmapMemObject" );
+                }
+            };
             template < typename T >
-            Ptr< T , buffer_map_deleter > map( const Queue& queue ,
+            Ptr< T , map_deleter_s > map( const Queue& queue ,
                     cl_bool block ,
                     cl_map_flags flags ,
                     size_t offset ,
@@ -821,8 +821,7 @@ namespace EH
                                                 0 , 0 , 0 ,
                                                 &err );
                 CheckError( err , "clEnqueueMapBuffer" );
-                return Ptr< T , buffer_map_deleter >( reinterpret_cast< T* >( ret ) ,
-                                                      { handler , queue } );
+                return Ptr< T , map_deleter_s >( reinterpret_cast< T* >( ret ) , { handler , queue() } );
             }
 
             Buffer createSubBuffer( cl_mem_flags flags ,
