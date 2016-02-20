@@ -4,6 +4,7 @@
 //#include <GLES2/gl2.h>
 #include "../EHLog.h"
 #include "../EHMatrix/EHMatrix.h"
+#include "../EHUtil/Memory.h"
 
 #include "gl_core_3_3.h"
 
@@ -656,21 +657,24 @@ namespace EH
                 glBufferSubData( Target , offset , _size , data );
                 CheckError( "glBufferSubData" );
             }
+            struct map_deleter_s
+            {
+                inline void operator () ( void *ptr )
+                {
+                    glUnmapBuffer( Target );
+                }
+            };
             /*
             GL_READ_ONLY 0x88B8
             GL_WRITE_ONLY 0x88B9
             GL_READ_WRITE 0x88BA
             */
-            inline void* MapBuffer( GLenum access ) const
+            template < typename T >
+            inline Ptr< T , map_deleter_s > MapBuffer( GLenum access ) const
             {
-                void *buf = glMapBuffer( Target , access );
+                void *ret = glMapBuffer( Target , access );
                 CheckError( "glMapBuffer" );
-                return buf;
-            }
-            inline void UnmapBuffer() const
-            {
-                glUnmapBuffer( Target );
-                CheckError( "glUnmapBuffer" );
+                return Ptr< T , map_deleter_s >( ret );
             }
             void BindTransformFeedback( GLuint index , GLintptr offset , GLsizei _size ) const
             {

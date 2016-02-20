@@ -110,7 +110,10 @@ namespace EH
 #endif
         }
         template < typename Handler , typename CRTP , typename UserData = empty_s , typename DebugData = empty_s2 >
-        class CLObject : public UserData , DebugData
+        class CLObject : public UserData 
+#ifndef EH_CL_NO_DEBUG
+                , public DebugData
+#endif
         {
         public:
             using this_type = CLObject< Handler , CRTP , UserData , DebugData >;
