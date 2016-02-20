@@ -87,7 +87,6 @@ namespace EH
         FrameBase *parent;
         Window *window;
 
-
         dt_type dt;
 
     protected:
@@ -128,6 +127,11 @@ namespace EH
         {
             assert( window );
             return window->GetCursorPos() * touch_a + touch_b;
+        }
+
+        dt_type GetDT() const
+        {
+            return dt;
         }
 
         virtual void TouchDown( int button ){}
