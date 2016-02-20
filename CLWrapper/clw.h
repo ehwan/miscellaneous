@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../EHLog.h"
+#include "../EHUtil/Memory.h"
 #include <CL/cl.h>
 #include <vector>
 #include <string>
@@ -109,8 +110,9 @@ namespace EH
 #endif
         }
         template < typename Handler , typename CRTP , typename UserData = empty_s , typename DebugData = empty_s2 >
-        struct CLObject : public UserData , DebugData
+        class CLObject : public UserData , DebugData
         {
+        public:
             using this_type = CLObject< Handler , CRTP , UserData , DebugData >;
             using handler_type = Handler;
             using user_data_type = UserData;
@@ -246,6 +248,7 @@ namespace EH
                 return handler;
             }
 
+        protected:
             void _private_retain()
             {
                 if( handler )
@@ -270,6 +273,7 @@ namespace EH
             {
             }
 
+        public:
             operator bool () const
             {
                 return handler;
@@ -284,23 +288,21 @@ namespace EH
                 return handler != rhs.handler;
             }
         };
-        struct Platform;
-        struct Device;
-        struct Context;
-        struct Kernel;
-        struct Program;
-        struct Buffer;
-        struct Queue;
+        class Device;
+        class Context;
+        class Kernel;
+        class Program;
+        class Buffer;
+        class Queue;
 
-        struct Platform : CLObject< cl_platform_id , Platform >
+        class Platform : public CLObject< cl_platform_id , Platform >
         {
+        public:
             using parent = CLObject< cl_platform_id , Platform >;
             using parent::parent;
             using parent::operator=;
-            Platform() :
-                parent()
-            {
-            }
+
+            friend class CLObject< cl_platform_id , Platform >;
 
             static std::vector< Platform > get()
             {
@@ -317,6 +319,13 @@ namespace EH
                 return std::vector< Platform >( platforms.begin() , platforms.end() );
             }
 
+            Platform() :
+                parent()
+            {
+            }
+
+
+        protected:
             template < typename T = char >
             std::vector< T > getInfo( cl_platform_info info ) const
             {
@@ -334,6 +343,7 @@ namespace EH
                 auto vec = getInfo( info );
                 return std::string( vec.data() , vec.size() );
             }
+        public:
             inline std::string getName() const
             {
                 return getInfoString( CL_PLATFORM_NAME );
@@ -378,11 +388,9 @@ namespace EH
             }
         };
 
-        struct Device : CLObject< cl_device_id , Device >
+        class Device : public CLObject< cl_device_id , Device >
         {
-            using parent = CLObject< cl_device_id , Device >;
-            using parent::parent;
-            using parent::operator=;
+        protected:
             void retain()
             {
                 cl_int err = clRetainDevice( handler );
@@ -393,7 +401,14 @@ namespace EH
                 cl_int err = clReleaseDevice( handler );
                 CheckError( err , "ReleaseDevice" );
             }
+        public:
+            using parent = CLObject< cl_device_id , Device >;
+            using parent::parent;
+            using parent::operator=;
 
+            friend class CLObject< cl_device_id , Device >;
+
+        protected:
             template < typename T = char >
             std::vector< T > getInfo( cl_device_info info ) const
             {
@@ -414,14 +429,15 @@ namespace EH
                 CheckError( err , "clGetDeviceInfo 3 : " , info );
                 return ret;
             }
-            inline cl_device_type getType() const
-            {
-                return getUnary< cl_device_type >( CL_DEVICE_TYPE );
-            }
             inline std::string getInfoString( cl_device_info info ) const
             {
                 auto vec = getInfo( info );
                 return std::string( vec.begin() , vec.end() );
+            }
+        public:
+            inline cl_device_type getType() const
+            {
+                return getUnary< cl_device_type >( CL_DEVICE_TYPE );
             }
             inline std::string getName() const
             {
@@ -453,11 +469,9 @@ namespace EH
             }
         };
 
-        struct Context : CLObject< cl_context , Context >
+        class Context : public CLObject< cl_context , Context >
         {
-            using parent = CLObject< cl_context, Context >;
-            using parent::parent;
-            using parent::operator=;
+        protected:
             void retain()
             {
                 cl_int err = clRetainContext( handler );
@@ -468,6 +482,12 @@ namespace EH
                 cl_int err = clReleaseContext( handler );
                 CheckError( err , "ReleaseContext" );
             }
+        public:
+            using parent = CLObject< cl_context, Context >;
+            using parent::parent;
+            using parent::operator=;
+
+            friend class CLObject< cl_context , Context >;
 
             Context() :
                 parent()
@@ -501,6 +521,7 @@ namespace EH
 
 
 
+        protected:
             template < typename T = char >
             std::vector< T > getInfo( cl_context_info info ) const
             {
@@ -522,6 +543,7 @@ namespace EH
                 return ret;
             }
 
+        public:
             cl_uint getNumDevices() const
             {
                 return getUnary< cl_uint >( CL_CONTEXT_NUM_DEVICES );
@@ -539,11 +561,9 @@ namespace EH
             }
         };
 
-        struct Queue : CLObject< cl_command_queue , Queue >
+        class Queue : public CLObject< cl_command_queue , Queue >
         {
-            using parent = CLObject< cl_command_queue , Queue >;
-            using parent::parent;
-            using parent::operator=;
+        protected:
             void retain()
             {
                 cl_int err = clRetainCommandQueue( handler );
@@ -554,6 +574,12 @@ namespace EH
                 cl_int err = clReleaseCommandQueue( handler );
                 CheckError( err , "ReleaseCommandQueue" );
             }
+        public:
+            using parent = CLObject< cl_command_queue , Queue >;
+            using parent::parent;
+            using parent::operator=;
+
+            friend class CLObject< cl_command_queue , Queue >;
 
             Queue() :
                 parent()
@@ -566,6 +592,7 @@ namespace EH
                 CheckError( err , "CreateCommandQueue" );
             }
 
+        protected:
             template < typename T = char >
             std::vector< T > getInfo( cl_command_queue_info info ) const
             {
@@ -587,6 +614,7 @@ namespace EH
                 return ret;
             }
 
+        public:
             Context getContext() const
             {
                 return getUnary< cl_context >( CL_QUEUE_CONTEXT );
@@ -604,11 +632,20 @@ namespace EH
                 clFlush( handler );
             }
         };
-        struct Buffer : CLObject< cl_mem , Buffer >
+        struct buffer_map_deleter
         {
-            using parent = CLObject< cl_mem , Buffer >;
-            using parent::parent;
-            using parent::operator=;
+            cl_mem buffer;
+            Queue queue;
+
+            void operator () ( void *ptr )
+            {
+                cl_int err = clEnqueueUnmapMemObject( queue() , buffer , ptr , 0 , 0 , 0 );
+                CheckError( err , "clEnqueueUnmapMemObject" );
+            }
+        };
+        class Buffer : public CLObject< cl_mem , Buffer >
+        {
+        protected:
             void retain()
             {
                 cl_int err = clRetainMemObject( handler );
@@ -619,6 +656,13 @@ namespace EH
                 cl_int err = clReleaseMemObject( handler );
                 CheckError( err , "clReleaseMemObject" );
             }
+
+        public:
+            using parent = CLObject< cl_mem , Buffer >;
+            using parent::parent;
+            using parent::operator=;
+
+            friend class CLObject< cl_mem , Buffer >;
 
             Buffer() :
                 parent()
@@ -761,7 +805,8 @@ namespace EH
                 CheckError( err , "clEnqueueFillBuffer" );
             }
 
-            void* map( const Queue& queue ,
+            template < typename T >
+            Ptr< T , buffer_map_deleter > map( const Queue& queue ,
                     cl_bool block ,
                     cl_map_flags flags ,
                     size_t offset ,
@@ -776,13 +821,8 @@ namespace EH
                                                 0 , 0 , 0 ,
                                                 &err );
                 CheckError( err , "clEnqueueMapBuffer" );
-                return ret;
-            }
-            void unmap( const Queue& queue ,
-                        void *ptr )
-            {
-                cl_int err = clEnqueueUnmapMemObject( queue() , handler , ptr , 0 , 0 , 0 );
-                CheckError( err , "clEnqueueUnmapMemObject" );
+                return Ptr< T , buffer_map_deleter >( reinterpret_cast< T* >( ret ) ,
+                                                      { handler , queue } );
             }
 
             Buffer createSubBuffer( cl_mem_flags flags ,
@@ -805,12 +845,9 @@ namespace EH
             }
         };
 
-        struct Program : CLObject< cl_program , Program >
+        class Program : public CLObject< cl_program , Program >
         {
-            using parent = CLObject< cl_program , Program >;
-            using parent::parent;
-            using parent::operator=;
-
+        protected:
             void retain()
             {
                 cl_int err = clRetainProgram( handler );
@@ -821,6 +858,12 @@ namespace EH
                 cl_int err = clReleaseProgram( handler );
                 CheckError( err , "clReleaseProgram" );
             }
+        public:
+            using parent = CLObject< cl_program , Program >;
+            using parent::parent;
+            using parent::operator=;
+
+            friend class CLObject< cl_program , Program >;
 
             Program() :
                 parent()
@@ -851,6 +894,7 @@ namespace EH
                 CheckError( err , "clBuildProgram 1" );
                 build_check( device );
             }
+        protected:
             void build_check( const Device& device ) const
             {
                 auto status = getBuildInfoUnary< cl_build_status >( device , CL_PROGRAM_BUILD_STATUS );
@@ -876,6 +920,7 @@ namespace EH
                 LOG( std::string( ret.begin() , ret.end() ) );
                 LOG( "Log end; --------------------------" );
             }
+        public:
             template < typename IterType >
             void build( IterType&& begin , IterType&& end , const char *options = 0 ) const
             {
@@ -894,6 +939,7 @@ namespace EH
             }
 
 
+        protected:
             template < typename T = char >
             std::vector< T > getInfo( cl_program_info info ) const
             {
@@ -935,6 +981,7 @@ namespace EH
                 CheckError( err , "clGetProgramBuildInfo 3 : " , info );
                 return ret;
             }
+        public:
 
             Context getContext() const
             {
@@ -969,11 +1016,9 @@ namespace EH
             }
         };
 
-        struct Kernel : CLObject< cl_kernel , Kernel >
+        class Kernel : public CLObject< cl_kernel , Kernel >
         {
-            using parent = CLObject< cl_kernel , Kernel >;
-            using parent::parent;
-            using parent::operator=;
+        protected:
             void retain()
             {
                 cl_int err = clRetainKernel( handler );
@@ -984,6 +1029,12 @@ namespace EH
                 cl_int err = clReleaseKernel( handler );
                 CheckError( err , "clReleaseKernel" );
             }
+        public:
+            using parent = CLObject< cl_kernel , Kernel >;
+            using parent::parent;
+            using parent::operator=;
+
+            friend class CLObject< cl_kernel , Kernel >;
 
             Kernel() :
                 parent()
@@ -1171,6 +1222,7 @@ namespace EH
                 return ArgumentWrapper{ index , handler };
             }
 
+        protected:
             template < typename T = char >
             std::vector< T > getInfo( cl_kernel_info info ) const
             {
@@ -1210,6 +1262,16 @@ namespace EH
                 cl_int err = clGetKernelWorkGroupInfo( handler , device() , info , sizeof( RET ) , &ret , 0 );
                 CheckError( err , "clGetKernelWorkGroupInfo 3 : " , info );
                 return ret;
+            }
+        public:
+
+            size_t getPreffered_workgroupsize_multiple( const Device& dev ) const
+            {
+                return getWorkGroupInfoUnary< size_t >( dev , CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE );
+            }
+            size_t get_workgroupsize( const Device& dev ) const
+            {
+                return getWorkGroupInfoUnary< size_t >( dev , CL_KERNEL_WORK_GROUP_SIZE );
             }
 
             std::string getName() const
