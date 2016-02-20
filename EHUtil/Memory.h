@@ -5,42 +5,46 @@
 
 namespace EH
 {
-    template < typename T >
+    template < typename T , typename Deleter = std::default_delete< T[] > >
     class Ptr
     {
     public:
         using value_type = T;
-        using const_type = const value_type;
+        using const_type = const T;
 
-        using reference_type = T&;
+        using reference_type = value_type&;
         using const_reference_type = const_type&;
 
-        using pointer_type = T*;
+        using pointer_type = value_type*;
         using const_pointer_type = const_type*;
 
     protected:
-        template < typename T0 >
-        using other_type = Ptr< T0 >;
-
-        using this_type  = other_type< T >;
+        using this_type  = Ptr< T , Deleter >;
 
         pointer_type ptr;
+        Deleter deleter;
 
     public:
         Ptr() :
             ptr( 0 )
         {
         }
-        explicit Ptr( std::size_t _count )
+        explicit Ptr( std::size_t _count ) :
+            ptr( new value_type[ _count ] ) ,
+            deleter()
         {
-            ptr = new value_type[ _count ];
         }
-        Ptr( pointer_type rhs )
+        Ptr( pointer_type rhs ) :
+            ptr( rhs ) ,
+            deleter()
         {
-            ptr = rhs;
         }
-        template < typename T2 >
-        Ptr( other_type< T2 >&& rhs )
+        Ptr( pointer_type rhs , const Deleter& del ) :
+            ptr( rhs ) ,
+            deleter( del )
+        {
+        }
+        Ptr( this_type&& rhs )
         {
             move_from( rhs );
         }
@@ -48,39 +52,7 @@ namespace EH
         {
             release();
         }
-
-    protected:
-        void retain()
-        {
-        }
-        void release()
-        {
-            if( ptr )
-            {
-                delete[] ptr;
-                ptr = 0;
-            }
-        }
-
-        template < typename T2 >
-        void move_from( other_type< T2 >& rhs )
-        {
-            ptr = reinterpret_cast< pointer_type >( rhs() );
-            rhs() = 0;
-        }
-        template < typename T2 >
-        void copy_from( const other_type< T2 >& rhs )
-        {
-            ptr = reinterpret_cast< pointer_type >( rhs() );
-        }
-
-    public:
-        void reset()
-        {
-            release();
-        }
-        template < typename T2 >
-        this_type& operator = ( other_type< T2 >&& rhs )
+        this_type& operator = ( this_type&& rhs )
         {
             release();
             move_from( rhs );
@@ -93,6 +65,38 @@ namespace EH
             ptr = rhs;
 
             return *this;
+        }
+
+    protected:
+        void retain()
+        {
+        }
+        void release()
+        {
+            if( ptr )
+            {
+                deleter( ptr );
+                set_zero();
+            }
+        }
+
+        void move_from( this_type& rhs )
+        {
+            ptr = rhs.set_zero();
+            deleter = std::move( rhs.deleter );
+        }
+        void copy_from( const this_type& rhs )
+        {
+            ptr = rhs();
+            deleter = rhs.deleter;
+        }
+
+    public:
+        pointer_type set_zero()
+        {
+            pointer_type ret = ptr;
+            ptr = 0;
+            return ret;
         }
 
         pointer_type operator -> ()
@@ -121,11 +125,11 @@ namespace EH
         {
             return ptr;
         }
-        pointer_type& operator () ( std::size_t i )
+        pointer_type operator () ( std::size_t i )
         {
             return ptr + i;
         }
-        const pointer_type& operator () ( std::size_t i ) const
+        pointer_type operator () ( std::size_t i ) const
         {
             return ptr + i;
         }

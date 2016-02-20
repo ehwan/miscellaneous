@@ -11,7 +11,7 @@ namespace EH
     namespace File
     {
         template < typename RET = char , typename SizeType >
-        static EH::Ptr< RET > LoadFile( const char *name , std::ios_base::openmode mode , SizeType size )
+        Ptr< RET , std::default_delete< RET[] > > LoadFile( const char *name , std::ios_base::openmode mode , SizeType size )
         {
             std::ifstream fbuf( name , mode );
 
@@ -27,17 +27,17 @@ namespace EH
             fbuf.read( ptr , sz );
             fbuf.close();
 
-            return EH::Ptr< RET >( reinterpret_cast< RET* >( ptr ) );
+            return Ptr< RET >( reinterpret_cast< RET* >( ptr ) );
         }
 
 
         template < typename RET = char , typename SizeType >
-        static EH::Ptr< RET > LoadText( const char *name , SizeType size )
+        Ptr< RET , std::default_delete< RET[] > > LoadText( const char *name , SizeType size )
         {
             return LoadFile< RET >( name , std::ios_base::in , size );
         }
         template < typename RET = char , typename SizeType >
-        static EH::Ptr< RET > LoadBinary( const char *name , SizeType size )
+        Ptr< RET , std::default_delete< RET[] > > LoadBinary( const char *name , SizeType size )
         {
             return LoadFile< RET >( name , std::ios_base::in | std::ios_base::binary , size );
         }
