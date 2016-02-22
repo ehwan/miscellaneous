@@ -110,7 +110,7 @@ namespace EH
 #endif
         }
         template < typename Handler , typename CRTP , typename UserData = empty_s , typename DebugData = empty_s2 >
-        class CLObject : public UserData 
+        class CLObject : public UserData
 #ifndef EH_CL_NO_DEBUG
                 , public DebugData
 #endif
@@ -284,11 +284,11 @@ namespace EH
 
             bool operator == ( const this_type& rhs ) const
             {
-                return handler == rhs.handher;
+                return handler == rhs();
             }
             bool operator != ( const this_type& rhs ) const
             {
-                return handler != rhs.handler;
+                return handler != rhs();
             }
         };
         class Device;
@@ -594,6 +594,10 @@ namespace EH
                 handler = clCreateCommandQueue( context() , device() , 0 , &err );
                 CheckError( err , "CreateCommandQueue" );
             }
+            explicit Queue( const Context& context ) :
+                Queue( context , context.getDevice() )
+            {
+            }
 
         protected:
             template < typename T = char >
@@ -883,7 +887,13 @@ namespace EH
                 handler = clCreateProgramWithSource( context() , strings.size() , strings.data() , 0 , &err );
                 CheckError( err , "clCreateProgramWithSource 2" );
             }
-            explicit Program( const Context& context , const char *source , size_t length = 0 )
+            explicit Program( const Context& context , const char *source )
+            {
+                cl_int err;
+                handler = clCreateProgramWithSource( context() , 1 , &source , 0 , &err );
+                CheckError( err , "clCreateProgramWithSource 4" );
+            }
+            explicit Program( const Context& context , const char *source , size_t length )
             {
                 cl_int err;
                 handler = clCreateProgramWithSource( context() , 1 , &source , &length , &err );
@@ -1064,25 +1074,25 @@ namespace EH
             struct ArgumentWrapper
             {
                 cl_uint index;
-                cl_kernel kernel;
+                const Kernel& kernel;
 
                 template < typename T >
                 const T& operator = ( const T& arg ) const
                 {
-                    cl_int err = clSetKernelArg( kernel , index , sizeof( T ) , &arg );
-                    CheckError( err , "clSetKernelArg 1 : " , index );
+                    cl_int err = clSetKernelArg( kernel() , index , sizeof( T ) , &arg );
+                    CheckError( err , kernel.getName() , " : " , "clSetKernelArg 1 : " , index );
                     return arg;
                 }
                 const Buffer& operator = ( const Buffer& buf ) const
                 {
-                    cl_int err = clSetKernelArg( kernel , index , sizeof( cl_mem ) , &buf.handler );
-                    CheckError( err , "clSetKernelArg 2 : " , index );
+                    cl_int err = clSetKernelArg( kernel() , index , sizeof( cl_mem ) , &buf.handler );
+                    CheckError( err , kernel.getName() , " : " , "clSetKernelArg 2 : " , index );
                     return buf;
                 }
                 void Set( size_t size , void *ptr = 0 ) const
                 {
-                    cl_int err = clSetKernelArg( kernel , index , size , ptr );
-                    CheckError( err , "clSetKernelArg 3 : " , index );
+                    cl_int err = clSetKernelArg( kernel() , index , size , ptr );
+                    CheckError( err , kernel.getName() , " : " , "clSetKernelArg 3 : " , index );
                 }
 
                 auto operator [] ( cl_uint id ) const
@@ -1133,19 +1143,19 @@ namespace EH
                 {
                     size_t num;
                     cl_int err;
-                    err = clGetKernelArgInfo( kernel , index , info , 0 , 0 , &num );
-                    CheckError( err , "clGetKernelArgInfo 1 : " , info );
+                    err = clGetKernelArgInfo( kernel() , index , info , 0 , 0 , &num );
+                    CheckError( err , kernel.getName() , " : " , "clGetKernelArgInfo 1 : " , info );
                     std::vector< T > data( num/sizeof( T ) );
-                    err = clGetKernelArgInfo( kernel , index , info , num , data.data() , 0 );
-                    CheckError( err , "clGetKernelArgInfo 2 : " , info );
+                    err = clGetKernelArgInfo( kernel() , index , info , num , data.data() , 0 );
+                    CheckError( err , kernel.getName() , " : " , "clGetKernelArgInfo 2 : " , info );
                     return data;
                 }
                 template < typename RET >
                 RET getUnary( cl_kernel_arg_info info ) const
                 {
                     RET ret;
-                    cl_int err = clGetKernelArgInfo( kernel , index , info , sizeof( RET ) , &ret , 0 );
-                    CheckError( err , "clGetKernelArgInfo 3 : " , info );
+                    cl_int err = clGetKernelArgInfo( kernel() , index , info , sizeof( RET ) , &ret , 0 );
+                    CheckError( err , kernel.getName() , " : " , "clGetKernelArgInfo 3 : " , info );
                     return ret;
                 }
 
@@ -1221,7 +1231,7 @@ namespace EH
 
             auto operator [] ( cl_uint index ) const
             {
-                return ArgumentWrapper{ index , handler };
+                return ArgumentWrapper{ index , *this };
             }
 
         protected:
@@ -1251,10 +1261,10 @@ namespace EH
                 size_t num;
                 cl_int err;
                 err = clGetKernelWorkGroupInfo( handler , device() , info , 0 , 0 , &num );
-                CheckError( err , "clGetKernelWorkGroupInfo 1 : " , info );
+                CheckError( err , getName() , " : " , "clGetKernelWorkGroupInfo 1 : " , info );
                 std::vector< T > data( num/sizeof( T ) );
                 err = clGetKernelWorkGroupInfo( handler, device() , info , num , data.data() , 0 );
-                CheckError( err , "clGetKernelWorkGroupInfo 2 : " , info );
+                CheckError( err , getName() , " : " , "clGetKernelWorkGroupInfo 2 : " , info );
                 return data;
             }
             template < typename RET >
@@ -1262,7 +1272,7 @@ namespace EH
             {
                 RET ret;
                 cl_int err = clGetKernelWorkGroupInfo( handler , device() , info , sizeof( RET ) , &ret , 0 );
-                CheckError( err , "clGetKernelWorkGroupInfo 3 : " , info );
+                CheckError( err , getName() , " : " , "clGetKernelWorkGroupInfo 3 : " , info );
                 return ret;
             }
         public:
@@ -1299,6 +1309,7 @@ namespace EH
                 return std::string( vec.begin() , vec.end() );
             }
 
+            using parent::operator ();
             inline void operator () ( const Queue& queue ,
                                       std::initializer_list< size_t > global_size ,
                                       std::initializer_list< size_t > local_size ,
@@ -1307,7 +1318,7 @@ namespace EH
                 cl_int err = clEnqueueNDRangeKernel( queue() , handler , global_size.size() ,
                                     global_offset.begin() , global_size.begin() , local_size.begin() ,
                                     0 , 0 , 0 );
-                CheckError( err , "clEnqueueNDRangeKernel" );
+                CheckError( err , getName() , " : " , "clEnqueueNDRangeKernel 1" );
             }
             inline void operator () ( const Queue& queue ,
                                       std::initializer_list< size_t > global_size ,
@@ -1316,7 +1327,7 @@ namespace EH
                 cl_int err = clEnqueueNDRangeKernel( queue() , handler , global_size.size() ,
                                     0 , global_size.begin() , local_size.begin() ,
                                     0 , 0 , 0 );
-                CheckError( err , "clEnqueueNDRangeKernel" );
+                CheckError( err , getName() , " : " , "clEnqueueNDRangeKernel 2" );
             }
             inline void operator () ( const Queue& queue ,
                                       std::initializer_list< size_t > global_size ) const
@@ -1324,12 +1335,33 @@ namespace EH
                 cl_int err = clEnqueueNDRangeKernel( queue() , handler , global_size.size() ,
                                     0 , global_size.begin() , 0 ,
                                     0 , 0 , 0 );
-                CheckError( err , "clEnqueueNDRangeKernel" );
+                CheckError( err , getName() , " : " , "clEnqueueNDRangeKernel 3" );
+            }
+            inline void operator () ( const Queue& queue , size_t global_size , size_t local_size , size_t global_offset ) const
+            {
+                cl_int err = clEnqueueNDRangeKernel( queue() , handler , 1 ,
+                                    &global_offset , &global_size , &local_size ,
+                                    0 , 0 , 0 );
+                CheckError( err , getName() , " : " , "clEnqueueNDRangeKernel 5" );
+            }
+            inline void operator () ( const Queue& queue , size_t global_size , size_t local_size ) const
+            {
+                cl_int err = clEnqueueNDRangeKernel( queue() , handler , 1 ,
+                                    0 , &global_size , &local_size ,
+                                    0 , 0 , 0 );
+                CheckError( err , getName() , " : " , "clEnqueueNDRangeKernel 6" );
+            }
+            inline void operator () ( const Queue& queue , size_t global_size ) const
+            {
+                cl_int err = clEnqueueNDRangeKernel( queue() , handler , 1 ,
+                                    0 , &global_size , 0 ,
+                                    0 , 0 , 0 );
+                CheckError( err , getName() , " : " , "clEnqueueNDRangeKernel 7" );
             }
             inline void operator () ( const Queue& queue ) const
             {
                 cl_int err = clEnqueueTask( queue() , handler , 0 , 0 , 0 );
-                CheckError( err , "clEnqueueNDRangeKernel" );
+                CheckError( err , getName() , " : " , "clEnqueueNDRangeKernel 4" );
             }
         };
 
