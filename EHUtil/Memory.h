@@ -6,6 +6,13 @@
 
 namespace EH
 {
+    struct nothing_deleter
+    {
+        template < typename T >
+        void operator () ( T&& x )
+        {
+        }
+    };
     template < typename T , typename Deleter = std::default_delete< T[] > >
     class Ptr
     {
@@ -27,7 +34,8 @@ namespace EH
 
     public:
         Ptr() :
-            ptr( 0 )
+            ptr( 0 ) ,
+            deleter()
         {
         }
         explicit Ptr( std::size_t _count ) :
@@ -45,9 +53,11 @@ namespace EH
             deleter( del )
         {
         }
-        Ptr( this_type&& rhs )
+        Ptr( this_type&& rhs ) :
+            ptr( rhs.ptr ) ,
+            deleter( rhs.deleter )
         {
-            move_from( rhs );
+            rhs.ptr = 0;
         }
         ~Ptr()
         {
@@ -56,7 +66,8 @@ namespace EH
         this_type& operator = ( this_type&& rhs )
         {
             release();
-            move_from( rhs );
+            ptr = rhs.ptr;
+            deleter = rhs.deleter;
 
             return *this;
         }
@@ -69,9 +80,6 @@ namespace EH
         }
 
     protected:
-        void retain()
-        {
-        }
         void release()
         {
             if( ptr )
@@ -81,16 +89,6 @@ namespace EH
             }
         }
 
-        void move_from( this_type& rhs )
-        {
-            ptr = rhs.set_zero();
-            deleter = std::move( rhs.deleter );
-        }
-        void copy_from( const this_type& rhs )
-        {
-            ptr = rhs();
-            deleter = rhs.deleter;
-        }
 
     public:
         pointer_type set_zero()
@@ -99,11 +97,11 @@ namespace EH
             ptr = 0;
             return ret;
         }
-
-        pointer_type operator -> ()
+        inline void reset()
         {
-            return ptr;
+            release();
         }
+
         pointer_type operator -> () const
         {
             return ptr;
@@ -145,7 +143,7 @@ namespace EH
         }
     };
 
-    template < typename DataType , typename Deleter = std::default_delete< DataType > >
+    template < typename DataType , typename Deleter >
     class shared_obj
     {
     public:
@@ -220,6 +218,22 @@ namespace EH
 
             return *this;
         }
+        this_type& operator = ( const data_type& rhs )
+        {
+            _private_release();
+            _private_load();
+            data = rhs;
+
+            return *this;
+        }
+        this_type& operator = ( data_type&& rhs )
+        {
+            _private_release();
+            _private_load();
+            data = rhs;
+
+            return *this;
+        }
 
         reference_type operator () ()
         {
@@ -237,10 +251,17 @@ namespace EH
             return data[ i ];
         }
         template < typename SFINE = data_type >
-        decltype( std::declval< const SFINE >().operator[]( 0 ) )
+        decltype( static_cast< const SFINE& >( std::declval< SFINE >() ).operator[]( 0 ) )
         operator [] ( std::size_t i ) const
         {
             return data[ i ];
+        }
+
+        template < typename SFINE = data_type >
+        typename std::enable_if< std::is_pointer< SFINE >::value , data_type >::type
+        operator -> () const
+        {
+            return data;
         }
 
         inline reference_counter_type reference_count() const
@@ -252,6 +273,11 @@ namespace EH
             }
 #endif
             return *ref;
+        }
+
+        void reset()
+        {
+            _private_release();
         }
 
 
