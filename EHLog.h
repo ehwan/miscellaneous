@@ -26,6 +26,8 @@ namespace EH
     constexpr const char *ANSI_COLOR_MAGENTA=   "\x1b[35m";
     constexpr const char *ANSI_COLOR_CYAN   =   "\x1b[36m";
     constexpr const char *ANSI_COLOR_RESET  =   "\x1b[0m";
+    constexpr const char *ANSI_CURSOR_TOP   = "\033[1;1H";
+    constexpr const char *ANSI_TERMINAL_RESET = "\033[2J";
 
 #ifndef EH_NO_LOG
     template < typename T >
