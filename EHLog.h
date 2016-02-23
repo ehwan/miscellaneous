@@ -31,7 +31,7 @@ namespace EH
     template < typename T >
     inline void LOGR( T&& arg0 )
     {
-        std::cout << arg0;
+        std::cout << std::forward< T >( arg0 );
     }
 #else
     template < typename T >
