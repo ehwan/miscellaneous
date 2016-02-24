@@ -162,7 +162,7 @@ namespace EH
             data() ,
             deleter()
         {
-            //_private_load();
+            _private_load();
         }
         shared_obj( const data_type& d_rhs , const Deleter& del_rhs ) :
             ref( 0 ) ,
