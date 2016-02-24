@@ -109,67 +109,38 @@ namespace EH
             }
 #endif
         }
-        template < typename Handler , typename CRTP , typename UserData = empty_s , typename DebugData = empty_s2 >
-        class CLObject : public UserData
-#ifndef EH_CL_NO_DEBUG
-                , public DebugData
-#endif
+        template < typename Handler , typename CRTP >
+        class CLObject
         {
         public:
-            using this_type = CLObject< Handler , CRTP , UserData , DebugData >;
+            using this_type = CLObject< Handler , CRTP >;
             using handler_type = Handler;
-            using user_data_type = UserData;
-            using debug_data_type = DebugData;
 
             handler_type handler;
 
             CLObject() :
-                user_data_type() ,
-#ifndef EH_CL_NO_DEBUG
-                debug_data_type() ,
-#endif
                 handler( 0 )
 
             {
             }
             CLObject( const this_type& rhs ) :
-                user_data_type( static_cast< const user_data_type& >( rhs ) ) ,
-#ifndef EH_CL_NO_DEBUG
-                debug_data_type( static_cast< const debug_data_type& >( rhs ) ) ,
-#endif
                 handler( rhs.handler )
             {
-                //handler = rhs.handler;
                 _private_retain();
             }
-            CLObject( const handler_type& id ) :
-                user_data_type() ,
-#ifndef EH_CL_NO_DEBUG
-                debug_data_type() ,
-#endif
+            explicit CLObject( const handler_type& id ) :
                 handler( id )
             {
-                //handler = id;
                 _private_retain();
             }
             CLObject( this_type&& rhs ) :
-                user_data_type( static_cast< user_data_type&& >( rhs ) ) ,
-#ifndef EH_CL_NO_DEBUG
-                debug_data_type( static_cast< debug_data_type&& >( rhs ) ) ,
-#endif
                 handler( rhs.handler )
             {
-                //handler = rhs.handler;
                 rhs.handler = 0;
             }
-            CLObject( handler_type&& id ) :
-                user_data_type() ,
-#ifndef EH_CL_NO_DEBUG
-                debug_data_type() ,
-#endif
+            explicit CLObject( handler_type&& id ) :
                 handler( id )
             {
-                //handler = id;
             }
             ~CLObject()
             {
@@ -178,73 +149,43 @@ namespace EH
             CRTP& operator = ( const this_type& rhs )
             {
                 _private_release();
-                user_data_type::operator = ( static_cast< const user_data_type& >( rhs ) );
-#ifndef EH_CL_NO_DEBUG
-                debug_data_type::operator = ( static_cast< const debug_data_type& >( rhs ) );
-#endif
                 handler = rhs.handler;
                 _private_retain();
 
                 return static_cast< CRTP& >( *this );
             }
-            /*
-            CRTP& operator = ( const T& id )
+            CRTP& operator = ( const handler_type& id )
             {
-                release();
+                _private_release();
                 handler = id;
-                retain();
+                _private_retain();
+
                 return static_cast< CRTP& >( *this );
             }
-            */
             CRTP& operator = ( this_type&& rhs )
             {
                 _private_release();
-                user_data_type::operator = ( static_cast< user_data_type&& >( rhs ) );
-#ifndef EH_CL_NO_DEBUG
-                debug_data_type::operator = ( static_cast< debug_data_type&& >( rhs ) );
-#endif
                 handler = rhs.handler;
                 rhs.handler = 0;
 
                 return static_cast< CRTP& >( *this );
             }
-            /*
-            CRTP& operator = ( T&& id )
+            CRTP& operator = ( handler_type&& id )
             {
-                release();
+                _private_release();
                 handler = id;
+
                 return static_cast< CRTP& >( *this );
             }
-            */
 
             operator CRTP& ()
             {
                 return static_cast< CRTP& >( *this );
             }
-            operator user_data_type& ()
-            {
-                return static_cast< user_data_type& >( *this );
-            }
-#ifndef EH_CL_NO_DEBUG
-            operator debug_data_type& ()
-            {
-                return static_cast< debug_data_type& >( *this );
-            }
-#endif
             operator const CRTP& () const
             {
                 return static_cast< const CRTP& >( *this );
             }
-            operator const user_data_type& () const
-            {
-                return static_cast< const user_data_type& >( *this );
-            }
-#ifndef EH_CL_NO_DEBUG
-            operator const debug_data_type& () const
-            {
-                return static_cast< const debug_data_type& >( *this );
-            }
-#endif
 
             inline handler_type operator ()() const
             {
@@ -302,10 +243,33 @@ namespace EH
         {
         public:
             using parent = CLObject< cl_platform_id , Platform >;
-            using parent::parent;
             using parent::operator=;
+            using parent::parent;
 
             friend class CLObject< cl_platform_id , Platform >;
+
+            Platform() :
+                parent()
+            {
+            }
+            Platform( const Platform& rhs ) :
+                parent( rhs )
+            {
+            }
+            Platform( Platform&& rhs ) :
+                parent( rhs )
+            {
+            }
+
+            Platform& operator = ( const Platform& rhs )
+            {
+                return parent::operator = ( rhs );
+            }
+            Platform& operator = ( Platform&& rhs )
+            {
+                return parent::operator = ( rhs );
+            }
+
 
             static std::vector< Platform > get()
             {
@@ -321,12 +285,6 @@ namespace EH
 
                 return std::vector< Platform >( platforms.begin() , platforms.end() );
             }
-
-            Platform() :
-                parent()
-            {
-            }
-
 
         protected:
             template < typename T = char >
@@ -411,6 +369,28 @@ namespace EH
 
             friend class CLObject< cl_device_id , Device >;
 
+            Device() :
+                parent()
+            {
+            }
+            Device( const Device& rhs ) :
+                parent( rhs )
+            {
+            }
+            Device( Device&& rhs ) :
+                parent( rhs )
+            {
+            }
+
+            Device& operator = ( const Device& rhs )
+            {
+                return parent::operator = ( rhs );
+            }
+            Device& operator = ( Device&& rhs )
+            {
+                return parent::operator = ( rhs );
+            }
+
         protected:
             template < typename T = char >
             std::vector< T > getInfo( cl_device_info info ) const
@@ -468,7 +448,31 @@ namespace EH
             }
             Device getParent() const
             {
-                return getUnary< cl_device_id >( CL_DEVICE_PARENT_DEVICE );
+                return Device( static_cast< const cl_device_id& >( getUnary< cl_device_id >( CL_DEVICE_PARENT_DEVICE ) ) );
+            }
+            cl_uint getMaxWorkItemDimension() const
+            {
+                return getUnary< cl_uint >( CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS );
+            }
+            size_t getMaxWorkGroupSize() const
+            {
+                return getUnary< size_t >( CL_DEVICE_MAX_WORK_GROUP_SIZE );
+            }
+            auto getMaxWorkItemSizes() const
+            {
+                struct Ret
+                {
+                    size_t arr[ 3 ];
+                };
+                return getUnary< Ret >( CL_DEVICE_MAX_WORK_ITEM_SIZES );
+            }
+            size_t getMaxWorkItemSize( cl_uint dim ) const
+            {
+                struct Ret
+                {
+                    size_t arr[ 3 ];
+                };
+                return getUnary< Ret >( CL_DEVICE_MAX_WORK_ITEM_SIZES ).arr[ dim ];
             }
         };
 
@@ -496,6 +500,14 @@ namespace EH
                 parent()
             {
             }
+            Context( const Context& rhs ) :
+                parent( rhs )
+            {
+            }
+            Context( Context&& rhs ) :
+                parent( rhs )
+            {
+            }
             explicit Context( const Device& device , const cl_context_properties *properties = 0 )
             {
                 cl_int err;
@@ -520,6 +532,15 @@ namespace EH
                                            0 , 0 ,
                                            &err );
                 CheckError( err , "CreateContext 2" );
+            }
+
+            Context& operator = ( const Context& rhs )
+            {
+                return parent::operator = ( rhs );
+            }
+            Context& operator = ( Context&& rhs )
+            {
+                return parent::operator = ( rhs );
             }
 
 
@@ -560,7 +581,7 @@ namespace EH
             }
             Device getDevice() const
             {
-                return getUnary< cl_device_id >( CL_CONTEXT_DEVICES );
+                return Device( static_cast< const cl_device_id& >( getUnary< cl_device_id >( CL_CONTEXT_DEVICES ) ) );
             }
         };
 
@@ -588,6 +609,14 @@ namespace EH
                 parent()
             {
             }
+            Queue( const Queue& rhs ) :
+                parent( rhs )
+            {
+            }
+            Queue( Queue&& rhs ) :
+                parent( rhs )
+            {
+            }
             explicit Queue( const Context& context , const Device& device )
             {
                 cl_int err;
@@ -597,6 +626,15 @@ namespace EH
             explicit Queue( const Context& context ) :
                 Queue( context , context.getDevice() )
             {
+            }
+
+            Queue& operator = ( const Queue& rhs )
+            {
+                return parent::operator = ( rhs );
+            }
+            Queue& operator = ( Queue&& rhs )
+            {
+                return parent::operator = ( rhs );
             }
 
         protected:
@@ -624,11 +662,11 @@ namespace EH
         public:
             Context getContext() const
             {
-                return getUnary< cl_context >( CL_QUEUE_CONTEXT );
+                return Context( static_cast< const cl_context& >( getUnary< cl_context >( CL_QUEUE_CONTEXT ) ) );
             }
             Device getDevice() const
             {
-                return getUnary< cl_device_id >( CL_QUEUE_DEVICE );
+                return Device( static_cast< const cl_device_id& >( getUnary< cl_device_id >( CL_QUEUE_DEVICE ) ) );
             }
             void finish() const
             {
@@ -664,6 +702,14 @@ namespace EH
                 parent()
             {
             }
+            Buffer( const Buffer& rhs ) :
+                parent( rhs )
+            {
+            }
+            Buffer( Buffer&& rhs ) :
+                parent( rhs )
+            {
+            }
             template < typename Ptr = void >
             explicit Buffer( const Context& context ,
                              cl_mem_flags flags ,
@@ -673,6 +719,15 @@ namespace EH
                 cl_int err;
                 handler = clCreateBuffer( context() , flags , size , host_ptr , &err );
                 CheckError( err , "clCreateBuffer" );
+            }
+
+            Buffer& operator = ( const Buffer& rhs )
+            {
+                return parent::operator = ( rhs );
+            }
+            Buffer& operator = ( Buffer&& rhs )
+            {
+                return parent::operator = ( rhs );
             }
 
             void read( const Queue& queue ,
@@ -875,6 +930,14 @@ namespace EH
                 parent()
             {
             }
+            Program( const Program& rhs ) :
+                parent( rhs )
+            {
+            }
+            Program( Program&& rhs ) :
+                parent( rhs )
+            {
+            }
             explicit Program( const Context& context , std::vector< const char* > strings , std::vector< size_t > lengths )
             {
                 cl_int err;
@@ -898,6 +961,15 @@ namespace EH
                 cl_int err;
                 handler = clCreateProgramWithSource( context() , 1 , &source , &length , &err );
                 CheckError( err , "clCreateProgramWithSource 3" );
+            }
+
+            Program& operator = ( const Program& rhs )
+            {
+                return parent::operator = ( rhs );
+            }
+            Program& operator = ( Program&& rhs )
+            {
+                return parent::operator = ( rhs );
             }
 
             void build( const Device& device , const char *options = 0 ) const
@@ -997,7 +1069,7 @@ namespace EH
 
             Context getContext() const
             {
-                return getUnary< cl_context >( CL_PROGRAM_CONTEXT );
+                return Context( static_cast< const cl_context& >( getUnary< cl_context >( CL_PROGRAM_CONTEXT ) ) );
             }
             cl_uint getNumDevices() const
             {
@@ -1016,15 +1088,6 @@ namespace EH
             {
                 auto ret = getInfo< char >( CL_PROGRAM_SOURCE );
                 return std::string( ret.begin() , ret.end() );
-            }
-
-            using parent::operator();
-            CLObject< cl_kernel , Kernel > operator () ( const char *name ) const
-            {
-                cl_int err;
-                cl_kernel kernel = clCreateKernel( handler , name , &err );
-                CheckError( err , "clCreateKernel 2 : " , name );
-                return CLObject< cl_kernel , Kernel >( kernel );
             }
         };
 
@@ -1052,11 +1115,36 @@ namespace EH
                 parent()
             {
             }
+            Kernel( const Kernel& rhs ) :
+                parent( rhs )
+            {
+            }
+            Kernel( Kernel&& rhs ) :
+                parent( rhs )
+            {
+            }
             explicit Kernel( const Program& program , const char *name )
             {
                 cl_int err;
                 handler = clCreateKernel( program() , name , &err );
                 CheckError( err , "clCreateKernel : " , name );
+
+#ifndef NDEBUG
+                const Device dev = program.getDevice();
+                LOG( "KERNEL " , getName() , "() : " );
+                LOG( "work_group_size : " , getWorkgroupsize( dev ) );
+                LOG( "preffered_workgroupsize_multiple : " , getPreffered_workgroupsize_multiple( dev ) );
+                LOG();
+#endif
+            }
+
+            Kernel& operator = ( const Kernel& rhs )
+            {
+                return parent::operator = ( rhs );
+            }
+            Kernel& operator = ( Kernel&& rhs )
+            {
+                return parent::operator = ( rhs );
             }
 
             template < std::size_t ID = 0 , typename T0 >
@@ -1281,7 +1369,7 @@ namespace EH
             {
                 return getWorkGroupInfoUnary< size_t >( dev , CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE );
             }
-            size_t get_workgroupsize( const Device& dev ) const
+            size_t getWorkgroupsize( const Device& dev ) const
             {
                 return getWorkGroupInfoUnary< size_t >( dev , CL_KERNEL_WORK_GROUP_SIZE );
             }
@@ -1297,11 +1385,11 @@ namespace EH
             }
             Context getContext() const
             {
-                return getUnary< cl_context >( CL_KERNEL_CONTEXT );
+                return Context( static_cast< const cl_context& >( getUnary< cl_context >( CL_KERNEL_CONTEXT ) ) );
             }
             Program getProgram() const
             {
-                return getUnary< cl_program >( CL_KERNEL_PROGRAM );
+                return Program( static_cast< const cl_program& >( getUnary< cl_program >( CL_KERNEL_PROGRAM ) ) );
             }
             std::string getAttributes() const
             {
