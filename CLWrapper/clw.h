@@ -18,8 +18,6 @@ namespace EH
 {
     namespace cl
     {
-        struct empty_s{};
-        struct empty_s2{};
 #ifndef EH_CL_NO_LOG
         constexpr const char* err2str[] =
         {
@@ -334,13 +332,15 @@ namespace EH
                 err = clGetDeviceIDs( handler , type , 0 , 0 , &num );
                 if( err == CL_SUCCESS )
                 {
-                    LOG( num , " devices fetched" );
-                    std::vector< cl_device_id > devices( num );
-                    if( num ){
+                    if( num != 0 )
+                    {
+                        LOG( num , " devices fetched" );
+                        std::vector< cl_device_id > devices( num );
                         err = clGetDeviceIDs( handler , type , num , devices.data() , 0 );
                         CheckError( err , "clGetDeviceIDs 2" );
+                        std::vector< std::reference_wrapper< const cl_device_id > > drefs( devices.begin() , devices.end() );
+                        return std::vector< Device >( drefs.begin() , drefs.end() );
                     }
-                    return std::vector< Device >( devices.begin() , devices.end() );
                 }else if( err != CL_DEVICE_NOT_FOUND )
                 {
                     CheckError( err , "GetDeviceIDs 1" );
@@ -575,8 +575,9 @@ namespace EH
             std::vector< Device > getDevices() const
             {
                 auto devs = getInfo< cl_device_id >( CL_CONTEXT_DEVICES );
+                std::vector< std::reference_wrapper< const cl_device_id > > drefs( devs.begin() , devs.end() );
                 return std::vector< Device >(
-                        devs.begin() , devs.end()
+                        drefs.begin() , drefs.end()
                         );
             }
             Device getDevice() const
@@ -1078,11 +1079,12 @@ namespace EH
             std::vector< Device > getDevices() const
             {
                 auto devs = getInfo< cl_device_id >( CL_PROGRAM_DEVICES );
-                return std::vector< Device >( devs.begin() , devs.end() );
+                std::vector< std::reference_wrapper< const cl_device_id > > drefs( devs.begin() , devs.end() );
+                return std::vector< Device >( drefs.begin() , drefs.end() );
             }
             Device getDevice() const
             {
-                return Device( getUnary< cl_device_id >( CL_PROGRAM_DEVICES ) );
+                return Device( static_cast< const cl_device_id& >( getUnary< cl_device_id >( CL_PROGRAM_DEVICES ) ) );
             }
             std::string getSource() const
             {
