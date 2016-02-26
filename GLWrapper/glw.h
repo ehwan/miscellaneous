@@ -179,6 +179,27 @@ namespace EH
             }
         }
 
+        static inline void DrawArrays( GLenum mode , GLint first , GLsizei count )
+        {
+            glDrawArrays( mode , first , count );
+            CheckError( "glDrawArrays" );
+        }
+        static inline void DrawArraysInstanced( GLenum mode , GLint first , GLsizei count , GLsizei primcount )
+        {
+            glDrawArraysInstanced( mode , first , count , primcount );
+            CheckError( "glDrawArraysInstanced" );
+        }
+        static inline void DrawElements( GLenum mode , GLsizei count , GLenum type , std::size_t offset )
+        {
+            glDrawElements( mode , count , type , ( const GLvoid* )offset );
+            CheckError( "glDrawElements" );
+        }
+        static inline void DrawElementsInstanced( GLenum mode , GLsizei count , GLenum type , std::size_t offset , GLsizei primcount )
+        {
+            glDrawElementsInstanced( mode , count , type , ( const GLvoid* )offset , primcount );
+            CheckError( "glDrawElementsInstanced" );
+        }
+
         template < GLenum ShaderType >
         struct Shader : GLObject< GLuint , Shader< ShaderType > >
         {
@@ -466,6 +487,26 @@ namespace EH
                 glUniform4f( GetUniformLocation( name ) , v1 , v2 , v3 , v4 );
                 CheckError( "glUniform4f : " , name );
             }
+            inline void SetUniform1v( const char *name , const GLfloat *ptr , GLsizei count = 1 )
+            {
+                glUniform1fv( GetUniformLocation( name ) , count , ptr );
+                CheckError( "glUniform1fv" );
+            }
+            inline void SetUniform2v( const char *name , const GLfloat *ptr , GLsizei count = 1 )
+            {
+                glUniform2fv( GetUniformLocation( name ) , count , ptr );
+                CheckError( "glUniform2fv" );
+            }
+            inline void SetUniform3v( const char *name , const GLfloat *ptr , GLsizei count = 1 )
+            {
+                glUniform3fv( GetUniformLocation( name ) , count , ptr );
+                CheckError( "glUniform3fv" );
+            }
+            inline void SetUniform4v( const char *name , const GLfloat *ptr , GLsizei count = 1 )
+            {
+                glUniform4fv( GetUniformLocation( name ) , count , ptr );
+                CheckError( "glUniform4fv" );
+            }
             inline void SetUniformMatrix2( const char *name , const GLfloat *mat ) const
             {
                 glUniformMatrix2fv( GetUniformLocation( name ) , 1 , GL_FALSE , mat );
@@ -584,9 +625,9 @@ namespace EH
 
                 return *this;
             }
-            inline const Vertex& VertexAttribPointer( GLint size , GLenum type , GLsizei stride , const GLvoid *ptr ) const
+            inline const Vertex& VertexAttribPointer( GLint size , GLenum type , GLsizei stride , std::size_t offset ) const
             {
-                glVertexAttribPointer( handler , size , type , GL_FALSE , stride , ptr );
+                glVertexAttribPointer( handler , size , type , GL_FALSE , stride , ( const GLvoid* )offset );
                 CheckError( "glVertexAttribPointer : " , handler );
 
                 return *this;

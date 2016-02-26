@@ -159,7 +159,7 @@ namespace EH
                 }
                 if( vao.handler == 0 )
                 {
-                    vao = VertexArray( create_flag ).Move();
+                    vao = VertexArray( create_flag );
                     vao.Begin();
                     vbo.Begin();
                     GL::Vertex( 0 ).EnableVertexAttribArray().VertexAttribPointer( dimension , GL_FLOAT , 0 , 0 );
