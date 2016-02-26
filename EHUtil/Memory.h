@@ -38,11 +38,6 @@ namespace EH
             deleter()
         {
         }
-        explicit Ptr( std::size_t _count ) :
-            ptr( new value_type[ _count ] ) ,
-            deleter()
-        {
-        }
         Ptr( pointer_type rhs ) :
             ptr( rhs ) ,
             deleter()
@@ -68,6 +63,7 @@ namespace EH
             release();
             ptr = rhs.ptr;
             deleter = rhs.deleter;
+            rhs.ptr = 0;
 
             return *this;
         }
@@ -116,11 +112,11 @@ namespace EH
             return ptr;
         }
 
-        pointer_type& operator () ()
+        pointer_type operator () ()
         {
             return ptr;
         }
-        const pointer_type& operator () () const
+        const pointer_type operator () () const
         {
             return ptr;
         }
