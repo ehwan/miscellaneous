@@ -742,7 +742,7 @@ namespace EH
             {
                 void *ret = glMapBuffer( Target , access );
                 CheckError( "glMapBuffer" );
-                return Ptr< T , map_deleter_s >( ret );
+                return Ptr< T , map_deleter_s >( reinterpret_cast< T* >( ret ) );
             }
             void BindTransformFeedback( GLuint index , GLintptr offset , GLsizei _size ) const
             {
