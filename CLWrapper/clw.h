@@ -3,6 +3,8 @@
 #include "../EHLog.h"
 #include "../EHUtil/Memory.h"
 #include <CL/cl.h>
+#include <CL/cl_gl.h>
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <memory>
@@ -473,6 +475,48 @@ namespace EH
                     size_t arr[ 3 ];
                 };
                 return getUnary< Ret >( CL_DEVICE_MAX_WORK_ITEM_SIZES ).arr[ dim ];
+            }
+        };
+
+        class ContextProperties : protected std::vector< cl_context_properties >
+        {
+        public:
+            using parent = std::vector< cl_context_properties >;
+
+            using typename parent::iterator;
+            using typename parent::const_iterator;
+            using parent::begin;
+            using parent::end;
+            using parent::size;
+            using parent::data;
+
+            ContextProperties() :
+                parent()
+            {
+            }
+
+            bool hasProperty( cl_context_properties p )
+            {
+                return findProperty( p ) != end();
+            }
+            void setProperty( cl_context_properties name , cl_context_properties data )
+            {
+                auto iter = findProperty( name );
+                if( iter == end() ){ parent::resize( size() + 2 ); *iter = name; }
+                *( ++iter ) = data;
+            }
+            void setPlatform( const Platform& platform )
+            {
+                setProperty( CL_CONTEXT_PLATFORM , ( cl_context_properties )platform() );
+            }
+            void setContextInteropUserSync( bool rhs )
+            {
+                setProperty( CL_CONTEXT_INTEROP_USER_SYNC , ( cl_context_properties )( rhs ? CL_TRUE : CL_FALSE ) );
+            }
+        protected:
+            iterator findProperty( cl_context_properties p )
+            {
+                return std::find( begin() , end() , p );
             }
         };
 
