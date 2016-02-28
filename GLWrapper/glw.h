@@ -383,6 +383,19 @@ namespace EH
                 CheckError( "glGetAttribLocation : " , name );
                 return ret;
             }
+            auto GetUniformBlockIndex( const GLchar *name ) const
+            {
+                auto ret = glGetUniformBlockIndex( handler , name );
+                CheckError( "glGetUniformBlockIndex : " , name );
+                return ret;
+            }
+            void BindUniformBlock( GLuint index , const GLchar *name )
+            {
+                glUniformBlockBinding( handler ,
+                                       GetUniformBlockIndex( name ) ,
+                                       index );
+                CheckError( "glUniformBlockBinding" );
+            }
             void BindAttribLocation( GLuint index , const GLchar *name )
             {
             #ifndef EH_GL_NO_DEBUG
@@ -744,19 +757,21 @@ namespace EH
                 CheckError( "glMapBuffer" );
                 return Ptr< T , map_deleter_s >( reinterpret_cast< T* >( ret ) );
             }
-            void BindTransformFeedback( GLuint index , GLintptr offset , GLsizei _size ) const
+
+            void BindBuffeRange( GLenum _target , GLuint index , GLintptr offset , GLsizei _size ) const
             {
-                glBindBufferRange( GL_TRANSFORM_FEEDBACK_BUFFER , index , handler , offset , _size );
+                glBindBufferRange( _target , index , handler , offset , _size );
                 CheckError( "glBindBufferRange" );
             }
-            void BindTransformFeedback( GLuint index ) const
+            void BindBufferBase( GLenum _target , GLuint index ) const
             {
-                glBindBufferBase( GL_TRANSFORM_FEEDBACK_BUFFER , index , handler );
+                glBindBufferBase ( _target , index , handler );
                 CheckError( "glBindBufferBase" );
             }
         };
         using VertexBuffer = Buffer< GL_ARRAY_BUFFER >;
         using IndexBuffer  = Buffer< GL_ELEMENT_ARRAY_BUFFER >;
+        using UniformBuffer = Buffer< GL_UNIFORM_BUFFER >;
 
 
 
