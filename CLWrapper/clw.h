@@ -30,35 +30,45 @@ namespace EH
         };
 
         using vec2f  = Matrix::vec2< cl_float >;
-        using vec2i  = Matrix::vec2< cl_int >;
-        using vec2ui = Matrix::vec2< cl_uint >;
-        using vec2b  = Matrix::vec2< cl_bool >;
-
         using vec3f  = Matrix::vec3< cl_float >;
-        using vec3i  = Matrix::vec3< cl_int >;
-        using vec3ui = Matrix::vec3< cl_uint >;
-        using vec3b  = Matrix::vec3< cl_bool >;
-
         using vec4f  = Matrix::vec4< cl_float >;
+        using vec8f  = Matrix::Vector< cl_float , 8 >;
+        using vec16f = Matrix::Vector< cl_float , 16 >;
+
+        using vec2i  = Matrix::vec2< cl_int >;
+        using vec3i  = Matrix::vec3< cl_int >;
         using vec4i  = Matrix::vec4< cl_int >;
-        using vec4ui = Matrix::vec4< cl_uint >;
-        using vec4b  = Matrix::vec4< cl_bool >;
+        using vec8i  = Matrix::Vector< cl_int , 8 >;
+        using vec16i = Matrix::Vector< cl_int , 16 >;
+
+        using vec2ui  = Matrix::vec2< cl_uint >;
+        using vec3ui  = Matrix::vec3< cl_uint >;
+        using vec4ui  = Matrix::vec4< cl_uint >;
+        using vec8ui  = Matrix::Vector< cl_uint , 8 >;
+        using vec16ui = Matrix::Vector< cl_uint , 16 >;
+
 
 
         using eh_float = cl_float;
-        using eh_float2 = eh_vec_type< vec2f , cl_float2 >;
-        using eh_float3 = eh_vec_type< vec3f , cl_float3 >;
-        using eh_float4 = eh_vec_type< vec4f , cl_float4 >;
+        using eh_float2  = eh_vec_type< vec2f  , cl_float2 >;
+        using eh_float3  = eh_vec_type< vec3f  , cl_float3 >;
+        using eh_float4  = eh_vec_type< vec4f  , cl_float4 >;
+        using eh_float8  = eh_vec_type< vec8f  , cl_float8 >;
+        using eh_float16 = eh_vec_type< vec16f , cl_float16 >;
 
         using eh_int = cl_int;
-        using eh_int2 = eh_vec_type< vec2i , cl_int2 >;
-        using eh_int3 = eh_vec_type< vec3i , cl_int3 >;
-        using eh_int4 = eh_vec_type< vec4i , cl_int4 >;
+        using eh_int2  = eh_vec_type< vec2i  , cl_int2 >;
+        using eh_int3  = eh_vec_type< vec3i  , cl_int3 >;
+        using eh_int4  = eh_vec_type< vec4i  , cl_int4 >;
+        using eh_int8  = eh_vec_type< vec8i  , cl_int8 >;
+        using eh_int16 = eh_vec_type< vec16i , cl_int16 >;
 
         using eh_uint = cl_uint;
-        using eh_uint2 = eh_vec_type< vec2ui , cl_uint2 >;
-        using eh_uint3 = eh_vec_type< vec3ui , cl_uint3 >;
-        using eh_uint4 = eh_vec_type< vec4ui , cl_uint4 >;
+        using eh_uint2  = eh_vec_type< vec2ui  , cl_uint2 >;
+        using eh_uint3  = eh_vec_type< vec3ui  , cl_uint3 >;
+        using eh_uint4  = eh_vec_type< vec4ui  , cl_uint4 >;
+        using eh_uint8  = eh_vec_type< vec8ui  , cl_uint8 >;
+        using eh_uint16 = eh_vec_type< vec16ui , cl_uint16 >;
 
         /*
         using eh_bool = cl_bool;
