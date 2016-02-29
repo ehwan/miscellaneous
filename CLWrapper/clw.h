@@ -2,6 +2,7 @@
 
 #include "../EHLog.h"
 #include "../EHUtil/Memory.h"
+#include "../EHMatrix/EHMatrix.h"
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
 #include <algorithm>
@@ -18,6 +19,54 @@
 
 namespace EH
 {
+    namespace cl
+    {
+        template < typename VecType , typename CLType >
+        struct alignas( alignof( CLType ) ) eh_vec_type : VecType
+        {
+            using parent = VecType;
+            using VecType::VecType;
+            using VecType::operator=;
+        };
+
+        using vec2f  = Matrix::vec2< cl_float >;
+        using vec2i  = Matrix::vec2< cl_int >;
+        using vec2ui = Matrix::vec2< cl_uint >;
+        using vec2b  = Matrix::vec2< cl_bool >;
+
+        using vec3f  = Matrix::vec3< cl_float >;
+        using vec3i  = Matrix::vec3< cl_int >;
+        using vec3ui = Matrix::vec3< cl_uint >;
+        using vec3b  = Matrix::vec3< cl_bool >;
+
+        using vec4f  = Matrix::vec4< cl_float >;
+        using vec4i  = Matrix::vec4< cl_int >;
+        using vec4ui = Matrix::vec4< cl_uint >;
+        using vec4b  = Matrix::vec4< cl_bool >;
+
+
+        using eh_float = cl_float;
+        using eh_float2 = eh_vec_type< vec2f , cl_float2 >;
+        using eh_float3 = eh_vec_type< vec3f , cl_float3 >;
+        using eh_float4 = eh_vec_type< vec4f , cl_float4 >;
+
+        using eh_int = cl_int;
+        using eh_int2 = eh_vec_type< vec2i , cl_int2 >;
+        using eh_int3 = eh_vec_type< vec3i , cl_int3 >;
+        using eh_int4 = eh_vec_type< vec4i , cl_int4 >;
+
+        using eh_uint = cl_uint;
+        using eh_uint2 = eh_vec_type< vec2ui , cl_uint2 >;
+        using eh_uint3 = eh_vec_type< vec3ui , cl_uint3 >;
+        using eh_uint4 = eh_vec_type< vec4ui , cl_uint4 >;
+
+        /*
+        using eh_bool = cl_bool;
+        using eh_bool2 = eh_vec_type< vec2b , cl_bool2 >;
+        using eh_bool3 = eh_vec_type< vec3b , cl_bool3 >;
+        using eh_bool4 = eh_vec_type< vec4b , cl_bool4 >;
+        */
+    };
     namespace cl
     {
 #ifndef EH_CL_NO_LOG
