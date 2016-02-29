@@ -29,6 +29,40 @@ namespace EH
 {
     namespace GL
     {
+        template < typename VecType , std::size_t Align >
+        struct alignas( Align ) eh_vec_type : VecType
+        {
+            using VecType::VecType;
+            using VecType::operator=;
+        };
+
+        using vec2f = Matrix::vec2< GLfloat >;
+        using vec3f = Matrix::vec3< GLfloat >;
+        using vec4f = Matrix::vec4< GLfloat >;
+
+        using vec2i = Matrix::vec2< GLint >;
+        using vec3i = Matrix::vec3< GLint >;
+        using vec4i = Matrix::vec4< GLint >;
+
+        using vec2ui = Matrix::vec2< GLuint >;
+        using vec3ui = Matrix::vec3< GLuint >;
+        using vec4ui = Matrix::vec4< GLuint >;
+
+        using eh_float  = GLfloat;
+        using eh_float2 = eh_vec_type< vec2f , sizeof( eh_float ) * 2 >;
+        using eh_float3 = eh_vec_type< vec3f , sizeof( eh_float ) * 4 >;
+        using eh_float4 = eh_vec_type< vec4f , sizeof( eh_float ) * 4 >;
+
+        using eh_int  = GLint;
+        using eh_int2 = eh_vec_type< vec2i , sizeof( eh_int ) * 2 >;
+        using eh_int3 = eh_vec_type< vec3i , sizeof( eh_int ) * 4 >;
+        using eh_int4 = eh_vec_type< vec4i , sizeof( eh_int ) * 4 >;
+
+        using eh_uint  = GLuint;
+        using eh_uint2 = eh_vec_type< vec2ui , sizeof( eh_uint ) * 2 >;
+        using eh_uint3 = eh_vec_type< vec3ui , sizeof( eh_uint ) * 4 >;
+        using eh_uint4 = eh_vec_type< vec4ui , sizeof( eh_uint ) * 4 >;
+
         static inline void LoadGLFunctions()
         {
             if( ogl_LoadFunctions() == ogl_LOAD_FAILED )
