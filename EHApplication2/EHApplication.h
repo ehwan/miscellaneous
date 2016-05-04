@@ -123,6 +123,21 @@ namespace EH
 
             CacheTouch();
         }
+        void AppendBound( const Matrix::vec2f advect )
+        {
+            bound_min += advect;
+            bound_max += advect;
+
+            touch_b = { bound_min[ 0 ] , bound_max[ 1 ] };
+        }
+        const Matrix::vec2f GetMinBound() const
+        {
+            return bound_min;
+        }
+        const Matrix::vec2f GetMaxBound() const
+        {
+            return bound_max;
+        }
         Matrix::vec2f GetCursorPos()
         {
             assert( window );
@@ -137,6 +152,8 @@ namespace EH
         virtual void TouchDown( int button ){}
         virtual void TouchUp( int button ){}
         virtual void TouchMove(){}
+        virtual void KeyDown( int key ){}
+        virtual void KeyUp( int key ){}
 
     protected:
         void CopyFrom( const FrameBase& rhs )

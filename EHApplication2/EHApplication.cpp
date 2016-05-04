@@ -16,6 +16,15 @@ namespace EH
     }
     static void key_callback( GLFWwindow *win , int key , int scancode , int action , int mods )
     {
+        switch( action )
+        {
+            case GLFW_PRESS:
+                current_frame->KeyDown( key );
+                break;
+            case GLFW_RELEASE:
+                current_frame->KeyUp( key );
+                break;
+        }
     }
     static void cursor_pos_callback( GLFWwindow *win , double xpos , double ypos )
     {
